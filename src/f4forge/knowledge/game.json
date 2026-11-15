@@ -1,0 +1,51 @@
+{
+  "schema": 1,
+  "steam_app": {"game": "377160", "creation_kit": "1946160", "fact": "game.steam_apps"},
+  "executable": "Fallout4.exe",
+  "generations": {
+    "fact": "runtime.generations",
+    "lines": [
+      {"id": "old-gen", "label": "Old-Gen (before the Next-Gen update)", "min": "1.0.0.0", "max": "1.10.163.0"},
+      {"id": "next-gen", "label": "Next-Gen update", "min": "1.10.980.0", "max": "1.10.984.0"},
+      {"id": "anniversary", "label": "Anniversary Edition line", "min": "1.11.0.0", "max": null}
+    ]
+  },
+  "f4se": {
+    "fact": "f4se.layout",
+    "loader": "f4se_loader.exe",
+    "dll": "f4se_{0}_{1}_{2}.dll",
+    "version_note": "the loader and DLL version resource reads 0.A.B.C for F4SE A.B.C"
+  },
+  "address_library": {"fact": "address_library.layout", "bin": "Data/F4SE/Plugins/version-{0}-{1}-{2}-{3}.bin"},
+  "official_masters": {
+    "fact": "load_order.official_masters",
+    "order": ["Fallout4.esm", "DLCRobot.esm", "DLCworkshop01.esm", "DLCCoast.esm", "DLCworkshop02.esm",
+              "DLCworkshop03.esm", "DLCNukaWorld.esm", "DLCUltraHighResolution.esm"]
+  },
+  "creation_club": {"fact": "creation_club.ccc", "list": "Fallout4.ccc", "prefix": "cc"},
+  "creation_kit": {
+    "fact": "creation_kit.layout",
+    "tools": {
+      "creation_kit": "CreationKit.exe",
+      "papyrus_compiler": "Papyrus Compiler/PapyrusCompiler.exe",
+      "papyrus_assembler": "Papyrus Compiler/PapyrusAssembler.exe",
+      "archive2": "Tools/Archive2/Archive2.exe",
+      "xwmaencode": "Tools/Audio/xwmaencode.exe",
+      "lipgenerator": "Tools/LipGen/LipGenerator/LipGenerator.exe",
+      "lipfuzer": "Tools/LipGen/LipFuzer/LIPFuzer.exe",
+      "creationkit32": "Tools/LipGen/CreationKit32.exe",
+      "elric": "Tools/Elric/Elrich.exe"
+    },
+    "required_for_tier": ["creation_kit", "papyrus_compiler", "archive2", "xwmaencode", "lipgenerator"],
+    "flags_file": "Data/Scripts/Source/Base/Institute_Papyrus_Flags.flg",
+    "source_zips": {
+      "Base": "Data/Scripts/Source/Base/Base.zip",
+      "DLC01": "Data/Scripts/Source/DLC01/DLC01.zip",
+      "DLC02": "Data/Scripts/Source/DLC02/DLC02.zip",
+      "DLC03": "Data/Scripts/Source/DLC03/DLC03.zip",
+      "DLC04": "Data/Scripts/Source/DLC04/DLC04.zip",
+      "DLC05": "Data/Scripts/Source/DLC05/DLC05.zip",
+      "DLC06": "Data/Scripts/Source/DLC06/DLC06.zip"
+    }
+  }
+}

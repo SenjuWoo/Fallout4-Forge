@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "note": "Where format and framework knowledge came from. Code is never copied unless a file says so with its licence.",
+  "sources": [
+    {"id": "installed", "kind": "installed game", "used_for": "every installed-tier fact; re-read by the command in the fact's 'how'"},
+    {"id": "pe-coff-spec", "kind": "primary", "url": "https://learn.microsoft.com/en-us/windows/win32/debug/pe-format", "used_for": "pe.py: headers, sections, resource directory, VS_FIXEDFILEINFO"},
+    {"id": "valve-keyvalues", "kind": "secondary", "url": "https://developer.valvesoftware.com/wiki/KeyValues", "used_for": "game.py: libraryfolders.vdf and appmanifest_*.acf parsing"}
+  ]
+}

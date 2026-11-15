@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "note": "Markers are paths relative to the game folder, matched case-insensitively; '*' globs inside one folder. docs are pages to read for syntax; config lists where the framework's own files live.",
+  "frameworks": [
+    {"id": "f4se", "name": "Fallout 4 Script Extender", "markers": ["f4se_loader.exe"], "docs": ["https://f4se.silverlock.org/"], "config": ["Data/F4SE/Plugins", "Data/Scripts/Source (F4SE .psc)"], "routes": ["f4se-native", "papyrus-script"]},
+    {"id": "address-library", "name": "Address Library for F4SE Plugins", "markers": ["Data/F4SE/Plugins/version-*.bin"], "docs": ["https://www.nexusmods.com/fallout4/mods/47327"], "config": ["Data/F4SE/Plugins/version-<runtime>.bin"], "routes": ["f4se-native"]},
+    {"id": "mcm", "name": "Mod Configuration Menu", "markers": ["Data/F4SE/Plugins/mcm.dll", "Data/Interface/MCM.swf", "Data/Scripts/MCM.pex"], "docs": ["https://www.nexusmods.com/fallout4/mods/21497"], "config": ["Data/MCM/Config/<Mod>/config.json", "Data/MCM/Config/<Mod>/settings.ini", "Data/MCM/Config/<Mod>/keybinds.json", "Data/MCM/Settings/<Mod>.ini"], "routes": ["mcm-menu"]},
+    {"id": "robco-patcher", "name": "RobCo Patcher", "markers": ["Data/F4SE/Plugins/RobCo_Patcher.dll"], "docs": [], "config": ["Data/F4SE/Plugins/RobCo_Patcher/"], "routes": ["robco-patch", "leveled-list-injection"]},
+    {"id": "base-object-swapper", "name": "Base Object Swapper (Fallout 4)", "markers": ["Data/F4SE/Plugins/po3_BaseObjectSwapperF4.dll"], "docs": [], "config": ["Data/*_SWAP.ini"], "routes": ["object-swap"]},
+    {"id": "looksmenu", "name": "LooksMenu", "markers": ["Data/F4SE/Plugins/f4ee.dll", "Data/LooksMenu.esp"], "docs": ["https://www.nexusmods.com/fallout4/mods/12631"], "config": ["Data/F4SE/Plugins/F4EE/Presets", "Data/F4SE/Plugins/F4EE/Sliders", "Data/F4SE/Plugins/F4EE/Overlays"], "routes": ["looksmenu-preset"]},
+    {"id": "bodyslide", "name": "BodySlide and Outfit Studio", "markers": ["Data/Tools/BodySlide/BodySlide.exe", "Data/Tools/BodySlide/OutfitStudio.exe"], "docs": ["https://www.nexusmods.com/fallout4/mods/25"], "config": ["Data/Tools/BodySlide/SliderSets", "Data/Tools/BodySlide/SliderPresets", "Data/Tools/BodySlide/SliderGroups"], "routes": ["bodyslide-outfit"]},
+    {"id": "aaf", "name": "Advanced Animation Framework", "markers": ["Data/AAF"], "docs": [], "config": ["Data/AAF/*.xml"], "routes": ["animation"]},
+    {"id": "workshop-framework", "name": "Workshop Framework", "markers": ["Data/WorkshopFramework.esm"], "docs": [], "config": [], "routes": ["workshop-settlement"]},
+    {"id": "sim-settlements-2", "name": "Sim Settlements 2", "markers": ["Data/SS2.esm"], "docs": [], "config": [], "routes": ["workshop-settlement"]},
+    {"id": "hud-framework", "name": "HUDFramework", "markers": ["Data/HUDFramework.esm"], "docs": [], "config": [], "routes": ["interface"]},
+    {"id": "baka-framework", "name": "Baka Framework", "markers": ["Data/F4SE/Plugins/BakaFramework.dll"], "docs": [], "config": ["Data/F4SE/Plugins/BakaFramework.ini"], "routes": ["papyrus-script"]},
+    {"id": "garden-of-eden", "name": "Garden of Eden Papyrus Script Extender", "markers": ["Data/F4SE/Plugins/GardenOfEdenPapyrusExtender.dll"], "docs": [], "config": [], "routes": ["papyrus-script"]},
+    {"id": "f4se-menu-framework", "name": "F4SE Menu Framework", "markers": ["Data/F4SE/Plugins/F4SEMenuFramework.dll"], "docs": [], "config": ["Data/F4SE/Plugins/F4SEMenuFramework.ini"], "routes": ["interface", "f4se-native"]},
+    {"id": "xdi", "name": "Extended Dialogue Interface", "markers": ["Data/F4SE/Plugins/XDI.dll", "Data/XDI.esm"], "docs": [], "config": [], "routes": ["quest-dialogue"]},
+    {"id": "community-shaders", "name": "Community Shaders (Fallout 4)", "markers": ["Data/F4SE/Plugins/FO4CommunityShaders.dll"], "docs": [], "config": ["Data/F4SE/Plugins/FO4CommunityShaders"], "routes": ["texture", "material"]},
+    {"id": "addictol", "name": "Addictol and Addictol Crash Logger", "markers": ["Data/F4SE/Plugins/Addictol.dll", "Data/F4SE/Plugins/AddictolCrashLogger.dll"], "docs": [], "config": ["Data/F4SE/Plugins/Addictol.toml", "Data/F4SE/Plugins/AddictolCrashLogger.toml"], "routes": ["crash-triage"]},
+    {"id": "buffout4", "name": "Buffout 4", "markers": ["Data/F4SE/Plugins/Buffout4.dll"], "docs": [], "config": ["Data/F4SE/Plugins/Buffout4.toml"], "routes": ["crash-triage"]},
+    {"id": "awkcr", "name": "Armor and Weapon Keywords Community Resource", "markers": ["Data/ArmorKeywords.esm"], "docs": [], "config": [], "routes": ["armor", "weapon-omod"]},
+    {"id": "prp", "name": "Previsibines Repair Pack", "markers": ["Data/PRP.esp", "Data/PPF.esm"], "docs": [], "config": [], "routes": ["previs"]},
+    {"id": "ufo4p", "name": "Unofficial Fallout 4 Patch", "markers": ["Data/Unofficial Fallout 4 Patch.esp"], "docs": ["https://www.nexusmods.com/fallout4/mods/4598"], "config": [], "routes": ["conflict-check"]}
+  ]
+}

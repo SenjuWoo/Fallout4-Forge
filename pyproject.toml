@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fallout4-forge"
+dynamic = ["version"]
+description = "Local-first toolkit for making, checking, packaging and shipping Fallout 4 mods"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "Fallout 4 Forge contributors"}]
+dependencies = ["PyYAML>=6"]
+
+[project.scripts]
+f4forge = "f4forge.cli:main"
+
+[tool.setuptools.dynamic]
+version = {attr = "f4forge.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+f4forge = ["knowledge/*", "templates/**/*", "templates/**/.*"]

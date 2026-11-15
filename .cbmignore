@@ -1,0 +1,12 @@
+# codebase-memory: index source only
+.venv/
+.git/
+build/
+dist/
+.f4forge/
+__pycache__/
+*.egg-info/
+tests/fixtures/
+LOCAL.md
+FIELD-REPORTS.md
+*.log

@@ -1,0 +1,23 @@
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+# Synthetic binary fixtures and generated game-format files are never diffed or normalised.
+tests/fixtures/**/*.ba2 binary
+tests/fixtures/**/*.esm binary
+tests/fixtures/**/*.esp binary
+tests/fixtures/**/*.esl binary
+tests/fixtures/**/*.pex binary
+tests/fixtures/**/*.dds binary
+tests/fixtures/**/*.nif binary
+tests/fixtures/**/*.bgsm binary
+tests/fixtures/**/*.bgem binary
+tests/fixtures/**/*.fuz binary
+tests/fixtures/**/*.xwm binary
+tests/fixtures/**/*.lip binary
+tests/fixtures/**/*.exe binary
+tests/fixtures/**/*.dll binary
+*.wav binary
+*.png binary
+*.zip binary
+*.7z binary

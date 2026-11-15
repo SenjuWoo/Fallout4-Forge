@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "id": "fallout4-forge",
+  "version": "0.1.0",
+  "entry": {
+    "root_env": "FALLOUT4_FORGE_ROOT",
+    "title": "Fallout 4 Forge",
+    "repo": "https://github.com/SenjuWoo/Fallout4-Forge",
+    "install": {
+      "kind": "source_zip",
+      "asset": "Fallout4-Forge-*-source.zip",
+      "entrypoint": "START-HERE.bat"
+    },
+    "update": {
+      "note": "Download the new source zip, extract it over the checkout folder and run START-HERE.bat; the forge home, tools folder and workspace are kept."
+    },
+    "doctor": {
+      "entrypoint": ["python", "-m", "f4forge", "doctor"]
+    },
+    "markers": ["f4forge.cmd", "src/f4forge"],
+    "capabilities": {
+      "cli": "f4forge",
+      "mcp": false,
+      "skills": "fallout4-forge",
+      "gui": false
+    },
+    "requires": ["python>=3.10"],
+    "platforms": ["windows"],
+    "notes": "Fallout 4 mods: plugins (Spriggit YAML + Mutagen worker), Papyrus, F4SE native, BA2, textures, materials, meshes, audio, MCM, RobCo Patcher, Base Object Swapper, packaging and deploy.",
+    "launch": [
+      {"name": "f4forge", "launcher": "f4forge.cmd"}
+    ]
+  }
+}

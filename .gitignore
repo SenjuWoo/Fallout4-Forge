@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.f4forge/
+*.log
+.pytest_cache/
+LOCAL.md
+FIELD-REPORTS.md

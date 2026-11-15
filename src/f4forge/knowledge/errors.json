@@ -1,0 +1,5 @@
+{
+  "schema": 1,
+  "note": "Log and crash signatures, filled by T27. Each entry: id, match (regex), log, meaning, fix, fact.",
+  "signatures": []
+}
