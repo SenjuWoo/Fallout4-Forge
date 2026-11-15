@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "fact": "plugin.light_range",
+  "light_max_object_id": 4095,
+  "object_id_floor": {
+    "hardcoded_range_min_hedr": 1.0,
+    "requires_master": true,
+    "hardcoded_floor": 1,
+    "default_floor": 2048,
+    "source": "xEdit dev-4.1.6 commit ee216dfac1e191a6ea821fbc3e492f8fb37b5a56: Core/wbDefinitionsFO4.pas (gdHardcodedRangeAdmitted := True; gdHardcodedRangeMinVersion := 1.0 for gmFO4) and Core/wbImplementation.pas TwbFile.GetAllowHardcodedRangeUseByGeneration (HEDR >= min version and at least one master); light MaxObjectID $FFF in Core/wbInterface.pas"
+  },
+  "default_hedr": 1.0,
+  "default_form_version": 131,
+  "runtime_note": "HEDR 1.0 plugins (object IDs from 001 with a master) are what the Next-Gen and later runtimes and Creation Kit 1.11 save; older runtimes expect 0.95 and IDs from 800.",
+  "runtime_note_fact": "plugin.hedr_runtime"
+}

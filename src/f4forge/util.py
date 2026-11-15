@@ -107,11 +107,13 @@ def ci_path(root: Path, relpath: str) -> Path | None:
     return cur
 
 
-def run(argv: list[str], timeout: int = 120, cwd: Path | None = None) -> dict:
-    """Run a program from an argv list (never a shell string). Output is captured and trimmed."""
+def run(argv: list[str], timeout: int = 120, cwd: Path | None = None, input_text: str | None = None,
+        env: dict | None = None) -> dict:
+    """Run a program from an argv list (never a shell string). Output is captured."""
     try:
-        cp = subprocess.run([str(a) for a in argv], capture_output=True, text=True, errors="replace",
-                            timeout=timeout, cwd=str(cwd) if cwd else None)
+        cp = subprocess.run([str(a) for a in argv], capture_output=True, text=True, errors="replace", encoding="utf-8",
+                            timeout=timeout, cwd=str(cwd) if cwd else None, input=input_text,
+                            env={**os.environ, **env} if env else None)
     except FileNotFoundError as e:
         return {"ok": False, "exit": None, "error": f"not found: {e}"}
     except subprocess.TimeoutExpired:

@@ -41,3 +41,17 @@ Settled during planning (PLAN.md, D1-D15). Not reopened by the build.
 - B7 (T04) The F4SE version is read from the DLL/loader version resource (`0.A.B.C` means F4SE
   A.B.C), with the `src/f4se-<ver>.tar.gz` name as a second witness.
 - B8 (T06) `load_order.official_masters` is recorded `unverified` until T14 confirms the order.
+- B9 (owner direction, 2026-11-15) The build runs every milestone to the end in one go instead of one
+  milestone per session; each milestone is still committed with its evidence.
+- B10 (T09) `.7z` assets are extracted with Windows' `tar.exe` (libarchive) first, then any
+  7-Zip-compatible tool found by capability probe. The `7z` on this PC is a packaged fork whose
+  view of `%LOCALAPPDATA%` is virtualised, so it is staged in the system temp folder.
+- B11 (T09) xEdit 4.1.5f ships `xFOEdit64.exe` (no `xEdit64.exe`); FO4Edit64.exe is copied from it.
+- B12 (T09, owner direction) Tool and framework pages stay in the data with their Nexus IDs, each
+  checked against the public Nexus GraphQL v2 API (name lookup by ID); `f4forge nexus` exposes the
+  same lookup to agents.
+- B13 (T15) The worker targets net9.0, the lowest framework Mutagen.Bethesda.Fallout4 0.54.4 ships
+  for (net9.0, net10.0) with an installed runtime. It writes through a temp folder that keeps the
+  plugin's file name because Mutagen checks the name against the ModKey.
+- B14 (T12) The DX10 chunk rule is "own chunk while the mip has at least 512x512 pixels, at most 4
+  chunks", which matches every vanilla entry and Archive2's own defaults.

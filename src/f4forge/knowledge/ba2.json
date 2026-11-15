@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "hash": {"algorithm": "CRC-32 reflected 0xEDB88320, initial value 0, no final XOR", "name": "lowercase file name without extension", "dir": "lowercase directory, backslash separators, no leading or trailing separator", "fact": "ba2.hashes"},
+  "gnrl_flags": 1048832,
+  "gnrl_stored_extensions": [".pex", ".fuz", ".wav", ".xwm", ".lip", ".strings", ".dlstrings", ".ilstrings", ".swf", ".gfx", ".png", ".xml", ".dds", ".bin", ".dat"],
+  "gnrl_stored_fact": "ba2.gnrl_stored",
+  "dx10_chunks": {"min_pixels": 262144, "max_chunks": 4, "cubemap": "one chunk", "fact": "ba2.dx10_chunks"},
+  "dx10_flags": {"plain": 2048, "cubemap": 2049},
+  "dx10_chunk_header_size": 24
+}

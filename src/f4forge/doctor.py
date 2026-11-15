@@ -86,13 +86,21 @@ def payload() -> dict:
                     data_files=list(DATA_FILES), topics=len(t), topics_written=sum(1 for x in t if x["available"]))
 
 
-def tools() -> dict:
-    lock = Path(__file__).resolve().parents[2] / "tools.lock.json"
-    if not lock.is_file():
-        return _section("degraded", [{"problem": "tools.lock.json not present in this checkout",
-                                      "fix": "update the forge; tool management comes with tools.lock.json"}])
-    return _section("degraded", [{"problem": "tool status not implemented in this build",
-                                  "fix": "update the forge"}], lock=str(lock))
+def tools(game_root: Path | None = None) -> dict:
+    from . import tools as T
+    try:
+        st = T.status(game_root=game_root)
+    except ForgeError as e:
+        return _section("degraded", [{"problem": str(e), "fix": e.fix}])
+    problems = []
+    if not st["tools_root"]:
+        problems.append({"problem": "no tools folder configured", "fix": "f4forge config --set tools_root=<folder>"})
+    for r in st["tools"]:
+        if not r["optional"] and r["status"] not in ("ok", "pinned"):
+            problems.append({"problem": f"{r['id']}: {r['status']}", "fix": r.get("fix") or "f4forge tools sync --approve"})
+    optional_missing = [r["id"] for r in st["tools"] if r["optional"] and r["status"] not in ("ok", "pinned")]
+    return _section("ok" if not problems else "degraded", problems, tools_root=st["tools_root"],
+                    counts=st["counts"], optional_missing=optional_missing)
 
 
 def worker() -> dict:
@@ -115,7 +123,8 @@ def run(explicit_game: str | None = None) -> tuple[dict, int]:
     report["toolchain"] = toolchain()
     report["game"] = game(explicit_game)
     report["payload"] = payload()
-    report["tools"] = tools()
+    game_root = Path(report["game"]["root"]) if report["game"].get("root") else None
+    report["tools"] = tools(game_root)
     report["worker"] = worker()
     failed = [s for s in REQUIRED if report[s]["status"] == "fail"]
     report["summary"] = {s: report[s]["status"] for s in SECTIONS}

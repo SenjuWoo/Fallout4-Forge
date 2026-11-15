@@ -1,0 +1,546 @@
+{
+  "schema": 1,
+  "updated": "2026-11-15",
+  "note": "Pinned tool set. github_release assets are verified by SHA-256 before extraction; git_clone entries by commit. Installed and path entries are referenced in place, never copied.",
+  "tools": [
+    {
+      "id": "xedit",
+      "kind": "github_release",
+      "role": "FO4Edit: inspect, conflict view, cleaning (GUI)",
+      "repo": "TES5Edit/TES5Edit",
+      "tag": "xedit-4.1.5f",
+      "asset": "xEdit.4.1.5f.7z",
+      "asset_sha256": "54c014da621f83f06a64fd92ddb8e32ed3082d1c65f543dc1c4e432130dced08",
+      "folder": "FO4Edit 4.1.5f",
+      "exe": "xFOEdit64.exe",
+      "exe_sha256": "5a27b76dc4f6634ac4c3b290434b9bca0b5d15bb57271f94b81c37dae85a94af",
+      "copy_as": {
+        "xFOEdit64.exe": "FO4Edit64.exe"
+      },
+      "license": "MPL-2.0",
+      "platform": "windows",
+      "routes": [
+        "plugin-record",
+        "conflict-check"
+      ],
+      "page": "https://www.nexusmods.com/fallout4/mods/2737"
+    },
+    {
+      "id": "spriggit",
+      "kind": "github_release",
+      "role": "plugin <-> YAML tree (project source of truth for records)",
+      "repo": "Mutagen-Modding/Spriggit",
+      "tag": "0.41.0",
+      "asset": "SpriggitCLI.zip",
+      "asset_sha256": "9b1088eed09f3b6b9d30a40b3b0545cea4c84c3f821b512590a60819f6916529",
+      "folder": "Spriggit 0.41.0",
+      "exe": "Spriggit.CLI.exe",
+      "exe_sha256": "e7667c537fd24df9982d15c8a225f5604d2167018b85674be88dd75a9b7880eb",
+      "probe": [
+        "--help"
+      ],
+      "probe_expect": "serialize",
+      "license": "GPL-3.0",
+      "platform": "windows",
+      "routes": [
+        "plugin-record"
+      ]
+    },
+    {
+      "id": "champollion",
+      "kind": "github_release",
+      "role": "PEX decompiler (no-Creation-Kit tier sources)",
+      "repo": "Orvid/Champollion",
+      "tag": "v1.3.2",
+      "asset": "Champollion.v1.3.2.zip",
+      "asset_sha256": "ea53054276ac8006ccd3b323286bfbc6e34a454fa419d08da9bd440cbd31b383",
+      "folder": "Champollion 1.3.2",
+      "exe": "Champollion.exe",
+      "exe_sha256": "450d9c74dade66331d573cfad881ef3e55384b5478e019af6d90a82378d1a1ec",
+      "probe": [
+        "--help"
+      ],
+      "probe_expect": "Champollion",
+      "license": "LGPL-3.0",
+      "platform": "windows",
+      "routes": [
+        "papyrus-script"
+      ]
+    },
+    {
+      "id": "caprica",
+      "kind": "github_release",
+      "role": "Papyrus compiler (no-Creation-Kit tier and CI)",
+      "repo": "Orvid/Caprica",
+      "tag": "v0.3.0",
+      "asset": "Caprica.v0.3.0.7z",
+      "asset_sha256": "0037e54cf3a1021e976278d9a637e8ae541aaf9ebeb8d274b6c2cfe32f4ee559",
+      "folder": "Caprica 0.3.0",
+      "exe": "Caprica.exe",
+      "exe_sha256": "389fef19a803c36342fa7f733c96b6e27ef10fcd0b171af10427e29cbe153ec6",
+      "probe": [
+        "--help"
+      ],
+      "probe_expect": "Caprica",
+      "license": "MIT",
+      "platform": "windows",
+      "routes": [
+        "papyrus-script"
+      ]
+    },
+    {
+      "id": "directxtex",
+      "kind": "github_release",
+      "role": "texconv, texdiag, texassemble",
+      "repo": "microsoft/DirectXTex",
+      "tag": "may2026",
+      "assets": [
+        {
+          "name": "texconv.exe",
+          "sha256": "dcfdec10244e02cf5037fba089c55fb7e1326b1c8181742d77d15fa5cb5eef06",
+          "extract": false
+        },
+        {
+          "name": "texdiag.exe",
+          "sha256": "411c303c98ba73e4423376f717ac139347dd749bf80a7fc1a22368ab1088ff56",
+          "extract": false
+        },
+        {
+          "name": "texassemble.exe",
+          "sha256": "324721a80cf954eccfd888a6c587f6602146f043a01d0181af25884c549e8f46",
+          "extract": false
+        }
+      ],
+      "folder": "DirectXTex may2026",
+      "exe": "texconv.exe",
+      "exe_sha256": "dcfdec10244e02cf5037fba089c55fb7e1326b1c8181742d77d15fa5cb5eef06",
+      "probe": [],
+      "probe_expect": "DirectX Texture Converter",
+      "license": "MIT",
+      "platform": "windows",
+      "routes": [
+        "texture"
+      ]
+    },
+    {
+      "id": "pynifly",
+      "kind": "github_release",
+      "role": "NIF import/export for headless Blender (loaded by path, never installed)",
+      "repo": "BadDogSkyrim/PyNifly",
+      "tag": "V30.3.0",
+      "asset": "io_scene_nifly.zip",
+      "asset_sha256": "e00da181ae1c15a785d6aa6f9a9a1bf4f4b7212eda3b8f1f9abe53a05122a359",
+      "folder": "PyNifly 30.3.0",
+      "exe": "io_scene_nifly/__init__.py",
+      "exe_sha256": "f4a13c8826cb62750016bda36c3546abc64b63a815917c5c3f9cbf69aaee2396",
+      "flatten": false,
+      "license": "GPL-3.0",
+      "platform": "windows",
+      "routes": [
+        "mesh"
+      ]
+    },
+    {
+      "id": "nifskope",
+      "kind": "github_release",
+      "role": "NIF viewer (GUI)",
+      "repo": "fo76utils/nifskope",
+      "tag": "v2.0.dev11-20251230",
+      "asset": "NifSkope_2_0_2025-12-30-win64qt6_clang.7z",
+      "asset_sha256": "561e4f7c1a74762134c3aeb3883143ddeaacffc6f60697ec7b2022987ba8fb50",
+      "folder": "NifSkope 2.0 dev11",
+      "exe": "NifSkope.exe",
+      "exe_sha256": "e7b309762545fb32a4d52f548e5b649f87e5d07d1515828d0468da0aaebe77f7",
+      "license": "BSD-style (NifTools licence, see the release)",
+      "platform": "windows",
+      "routes": [
+        "mesh"
+      ],
+      "optional": true
+    },
+    {
+      "id": "loot",
+      "kind": "github_release",
+      "role": "load-order sorting and masterlist messages (GUI)",
+      "repo": "loot/loot",
+      "tag": "0.29.2",
+      "asset": "loot_0.29.2-win64.7z",
+      "asset_sha256": "10685b03a43a77a7644b5c417eb757f6b405425f3c4d9abeaab4faaa967fb6e0",
+      "folder": "LOOT 0.29.2",
+      "exe": "LOOT.exe",
+      "exe_sha256": "4487f04ab02fc438efadeb3595979b198272356e9d9f064c52d1b39d9bdcec98",
+      "license": "GPL-3.0",
+      "platform": "windows",
+      "routes": [
+        "conflict-check"
+      ],
+      "optional": true
+    },
+    {
+      "id": "cmt",
+      "kind": "github_release",
+      "role": "Collective Modding Toolkit: setup scanner (GUI)",
+      "repo": "wxMichael/Collective-Modding-Toolkit",
+      "tag": "0.6.3",
+      "asset": "cm-toolkit.zip",
+      "asset_sha256": "46778da03f08964b0a9cc0d504a3670ee885bec0fd6e84781ae95148da85b1c7",
+      "folder": "Collective Modding Toolkit 0.6.3",
+      "exe_sha256": "",
+      "license": "GPL-2.0",
+      "platform": "windows",
+      "routes": [
+        "crash-triage"
+      ],
+      "optional": true
+    },
+    {
+      "id": "classic",
+      "kind": "github_release",
+      "role": "CLASSIC crash-log scanner",
+      "repo": "evildarkarchon/CLASSIC-Fallout4",
+      "tag": "9.1.0",
+      "asset": "CLASSIC-9.1.0.7z",
+      "asset_sha256": "ca248cc262f84782f5c04efbe2403adb18d3b67a44573aadeab32277577fc1b5",
+      "folder": "CLASSIC 9.1.0",
+      "exe_sha256": "",
+      "license": "see the release (no SPDX on GitHub)",
+      "platform": "windows",
+      "routes": [
+        "crash-triage"
+      ],
+      "optional": true
+    },
+    {
+      "id": "ckpe",
+      "kind": "github_release",
+      "role": "Creation Kit Platform Extended, staged only (deployed by f4forge ck ckpe-install --approve)",
+      "repo": "Perchik71/Creation-Kit-Platform-Extended",
+      "tag": "release",
+      "asset": "ckpe-fo4-master-a2abacd8.zip",
+      "asset_sha256": "2f496af391f24e9b7cd4f667d788f0d52f4c71db203e9daf60c6fd7048034882",
+      "folder": "CKPE fo4",
+      "exe_sha256": "",
+      "flatten": false,
+      "license": "LGPL-3.0",
+      "platform": "windows",
+      "routes": [
+        "previs"
+      ],
+      "optional": true
+    },
+    {
+      "id": "commonlibf4",
+      "kind": "git_clone",
+      "role": "CommonLibF4 (GPL-3.0 with modding exception)",
+      "repo": "libxse/commonlibf4",
+      "commit": "6d90954ce8104b6a77564da707faef710bbe57cf",
+      "submodules": true,
+      "folder": "CommonLibF4",
+      "license": "GPL-3.0 with modding exception",
+      "routes": [
+        "f4se-native"
+      ]
+    },
+    {
+      "id": "commonlibf4-template",
+      "kind": "git_clone",
+      "role": "xmake template for native F4SE plugins",
+      "repo": "libxse/commonlibf4-template",
+      "commit": "e70c24ab6d1b12478a9fc09ff99aedb73d1f394a",
+      "submodules": false,
+      "folder": "CommonLibF4-template",
+      "license": "GPL-3.0 with modding exception",
+      "routes": [
+        "f4se-native"
+      ]
+    },
+    {
+      "id": "f4se-src",
+      "kind": "git_clone",
+      "role": "F4SE 0.7.9 source (Papyrus .psc, PluginAPI.h)",
+      "repo": "ianpatt/f4se",
+      "commit": "4692e9bba0f87d8b8d1a0b79110bf212f2b2ada7",
+      "tag": "v0.7.9",
+      "submodules": false,
+      "folder": "F4SE 0.7.9 source",
+      "license": "F4SE licence (no SPDX)",
+      "routes": [
+        "papyrus-script",
+        "f4se-native"
+      ]
+    },
+    {
+      "id": "mutagen",
+      "kind": "nuget",
+      "role": "records worker library",
+      "package": "Mutagen.Bethesda.Fallout4",
+      "version": "0.54.4",
+      "license": "GPL-3.0",
+      "routes": [
+        "plugin-record"
+      ]
+    },
+    {
+      "id": "dotnet",
+      "kind": "path",
+      "role": ".NET SDK (records worker, Spriggit)",
+      "names": [
+        "dotnet"
+      ],
+      "probe": [
+        "--list-sdks"
+      ],
+      "probe_expect": "[",
+      "fix": "install the .NET 8 SDK or newer",
+      "routes": [
+        "plugin-record"
+      ]
+    },
+    {
+      "id": "git",
+      "kind": "path",
+      "role": "git (pinned clones)",
+      "names": [
+        "git"
+      ],
+      "probe": [
+        "--version"
+      ],
+      "probe_expect": "git version",
+      "routes": [
+        "f4se-native"
+      ]
+    },
+    {
+      "id": "7z",
+      "kind": "path",
+      "role": "7-Zip or a compatible fork (extracts .7z assets)",
+      "names": [
+        "7z",
+        "7za",
+        "7zz"
+      ],
+      "known_paths": [
+        "%ProgramFiles%\\7-Zip\\7z.exe"
+      ],
+      "probe": [],
+      "probe_expect": "<Commands>",
+      "routes": [],
+      "optional": true,
+      "note": "Windows tar.exe (libarchive) is tried first for .7z assets"
+    },
+    {
+      "id": "blender",
+      "kind": "path",
+      "role": "Blender (headless mesh import/export)",
+      "names": [
+        "blender"
+      ],
+      "known_paths": [
+        "%ProgramFiles%\\Blender Foundation\\Blender\\blender.exe"
+      ],
+      "probe": [
+        "--version"
+      ],
+      "probe_expect": "Blender",
+      "routes": [
+        "mesh"
+      ],
+      "optional": true
+    },
+    {
+      "id": "ffprobe",
+      "kind": "path",
+      "role": "ffprobe (WAV checks)",
+      "names": [
+        "ffprobe"
+      ],
+      "probe": [
+        "-version"
+      ],
+      "probe_expect": "ffprobe version",
+      "routes": [
+        "audio-voice"
+      ],
+      "optional": true
+    },
+    {
+      "id": "xmake",
+      "kind": "path",
+      "role": "xmake (native plugin builds)",
+      "names": [
+        "xmake"
+      ],
+      "probe": [
+        "--version"
+      ],
+      "probe_expect": "xmake",
+      "routes": [
+        "f4se-native"
+      ],
+      "optional": true
+    },
+    {
+      "id": "msvc",
+      "kind": "vswhere",
+      "role": "MSVC C++ toolset through vswhere",
+      "routes": [
+        "f4se-native"
+      ],
+      "optional": true
+    },
+    {
+      "id": "creation_kit",
+      "kind": "installed",
+      "role": "Creation Kit",
+      "location": "game:CreationKit.exe",
+      "routes": [
+        "previs",
+        "quest-dialogue"
+      ],
+      "optional": true
+    },
+    {
+      "id": "papyrus_compiler",
+      "kind": "installed",
+      "role": "official Papyrus compiler",
+      "location": "game:Papyrus Compiler/PapyrusCompiler.exe",
+      "routes": [
+        "papyrus-script"
+      ],
+      "optional": true
+    },
+    {
+      "id": "archive2",
+      "kind": "installed",
+      "role": "official BA2 tool (cross-check for the native writer)",
+      "location": "game:Tools/Archive2/Archive2.exe",
+      "routes": [
+        "package-publish"
+      ],
+      "optional": true
+    },
+    {
+      "id": "xwmaencode",
+      "kind": "installed",
+      "role": "WAV to XWM",
+      "location": "game:Tools/Audio/xwmaencode.exe",
+      "routes": [
+        "audio-voice"
+      ],
+      "optional": true
+    },
+    {
+      "id": "lipgenerator",
+      "kind": "installed",
+      "role": "LIP generation",
+      "location": "game:Tools/LipGen/LipGenerator/LipGenerator.exe",
+      "routes": [
+        "audio-voice"
+      ],
+      "optional": true
+    },
+    {
+      "id": "lipfuzer",
+      "kind": "installed",
+      "role": "LIP and FUZ batch tool",
+      "location": "game:Tools/LipGen/LipFuzer/LIPFuzer.exe",
+      "routes": [
+        "audio-voice"
+      ],
+      "optional": true
+    },
+    {
+      "id": "elric",
+      "kind": "installed",
+      "role": "Elric texture/mesh processor",
+      "location": "game:Tools/Elric/Elrich.exe",
+      "routes": [
+        "texture"
+      ],
+      "optional": true
+    },
+    {
+      "id": "bodyslide",
+      "kind": "installed",
+      "role": "BodySlide and Outfit Studio (mod-manager managed)",
+      "location": "game:Data/Tools/BodySlide/BodySlide.exe",
+      "routes": [
+        "bodyslide-outfit"
+      ],
+      "optional": true
+    },
+    {
+      "id": "wrye-bash",
+      "kind": "installed",
+      "role": "Wrye Bash",
+      "location": "game:Mopy/Wrye Bash.exe",
+      "routes": [
+        "conflict-check"
+      ],
+      "optional": true
+    },
+    {
+      "id": "material-editor",
+      "kind": "manual",
+      "role": "Material Editor (GUI); the forge has native BGSM/BGEM code",
+      "page": "https://www.nexusmods.com/fallout4/mods/3635",
+      "detect": [
+        "*/Material Editor*.exe",
+        "Material Editor*/*.exe"
+      ],
+      "note": "Nexus download only; not needed by any route",
+      "routes": [
+        "material"
+      ],
+      "optional": true,
+      "page_checked": "2026-11-15 (Nexus GraphQL v2 name lookup / STEP page title)"
+    },
+    {
+      "id": "bsarch",
+      "kind": "manual",
+      "role": "BSArch (archive tool); the forge has native BA2 code",
+      "page": "https://www.nexusmods.com/newvegas/mods/64745",
+      "detect": [
+        "*/BSArch.exe",
+        "BSArch*/*.exe"
+      ],
+      "note": "Nexus download only; not needed by any route",
+      "routes": [
+        "package-publish"
+      ],
+      "optional": true,
+      "page_checked": "2026-11-15 (Nexus GraphQL v2 name lookup / STEP page title)"
+    },
+    {
+      "id": "bethini",
+      "kind": "manual",
+      "role": "BethINI Pie (INI editor)",
+      "page": "https://www.nexusmods.com/site/mods/631",
+      "detect": [
+        "*/Bethini*.exe"
+      ],
+      "note": "Nexus download only",
+      "routes": [
+        "ini-tweak"
+      ],
+      "optional": true,
+      "page_checked": "2026-11-15 (Nexus GraphQL v2 name lookup / STEP page title)"
+    },
+    {
+      "id": "xlodgen",
+      "kind": "manual",
+      "role": "xLODGen (LOD generation)",
+      "page": "https://stepmodifications.org/forum/topic/13451-xlodgen-terrain-lod-beta-132-for-fnv-fo3-fo4-fo4vr-tes5-sse-tes5vr-enderal-enderalse/",
+      "detect": [
+        "*/xLODGen*.exe"
+      ],
+      "note": "forum download only",
+      "routes": [
+        "previs"
+      ],
+      "optional": true,
+      "page_checked": "2026-11-15 (Nexus GraphQL v2 name lookup / STEP page title)"
+    }
+  ]
+}

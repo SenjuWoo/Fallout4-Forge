@@ -558,5 +558,375 @@ class RoutingTests(Base):
                 self.assertIn(t["when"], ("always", "creation-kit", "no-creation-kit", "optional"), r["id"])
 
 
+# --- T08: tool lock and sync against a local HTTP fixture ---------------------------------------------
+
+class _Server:
+    def __init__(self, folder: Path):
+        import functools
+        import http.server
+        import threading
+        outer = self
+        self.hits = 0
+
+        class Handler(http.server.SimpleHTTPRequestHandler):
+            def do_GET(self):
+                outer.hits += 1
+                return super().do_GET()
+
+            def log_message(self, *a):
+                pass
+
+        self.httpd = http.server.ThreadingHTTPServer(("127.0.0.1", 0),
+                                                     functools.partial(Handler, directory=str(folder)))
+        self.port = self.httpd.server_address[1]
+        self.thread = threading.Thread(target=self.httpd.serve_forever, daemon=True)
+        self.thread.start()
+
+    def url(self, name):
+        return f"http://127.0.0.1:{self.port}/{name}"
+
+    def close(self):
+        self.httpd.shutdown()
+        self.httpd.server_close()
+
+
+class ToolsTests(Base):
+    def setUp(self):
+        super().setUp()
+        import hashlib
+        import zipfile
+        from f4forge import tools
+        self.T = tools
+        self.www = self.tmp / "www"
+        self.www.mkdir()
+        z = self.www / "faketool-1.0.zip"
+        with zipfile.ZipFile(z, "w") as zf:
+            zf.writestr("faketool-1.0/faketool.exe", b"MZ fake tool")
+            zf.writestr("faketool-1.0/readme.txt", "hi")
+        raw = write(self.www / "single.exe", b"MZ single")
+        self.server = _Server(self.www)
+        sha = lambda p: hashlib.sha256(p.read_bytes()).hexdigest()  # noqa: E731
+        self.lock = {"schema": 1, "tools": [
+            {"id": "fake", "kind": "github_release", "role": "test", "repo": "x/y", "tag": "1.0",
+             "asset": "faketool-1.0.zip", "asset_sha256": sha(z), "url": self.server.url("faketool-1.0.zip"),
+             "folder": "Fake Tool 1.0", "exe": "faketool.exe", "exe_sha256": hashlib.sha256(b"MZ fake tool").hexdigest(),
+             "copy_as": {"faketool.exe": "faketool-renamed.exe"}},
+            {"id": "single", "kind": "github_release", "role": "test", "repo": "x/y", "tag": "1.0",
+             "assets": [{"name": "single.exe", "sha256": sha(raw), "extract": False, "url": self.server.url("single.exe")}],
+             "folder": "Single", "exe": "single.exe", "exe_sha256": sha(raw)},
+            {"id": "maybe", "kind": "manual", "role": "manual", "detect": ["*/maybe.exe"], "optional": True},
+        ]}
+        self.root = self.tmp / "tools root !"
+
+    def tearDown(self):
+        self.server.close()
+        super().tearDown()
+
+    def test_dry_run_changes_nothing(self):
+        res = self.T.sync(self.lock, self.root, approve=False)
+        self.assertTrue(res["dry_run"])
+        self.assertEqual([a["action"] for a in res["actions"]], ["install", "install"])
+        self.assertFalse(self.root.exists())
+        self.assertEqual(self.server.hits, 0)
+
+    def test_good_hash_installs_and_second_sync_downloads_nothing(self):
+        res = self.T.sync(self.lock, self.root, approve=True)
+        self.assertEqual(res["errors"], [])
+        self.assertEqual(res["installed"], ["fake", "single"])
+        self.assertTrue((self.root / "Fake Tool 1.0" / "faketool.exe").is_file(), "wrapper folder flattened")
+        self.assertTrue((self.root / "Fake Tool 1.0" / "faketool-renamed.exe").is_file())
+        rec = json.loads((self.root / "tools.receipt.json").read_text(encoding="utf-8"))
+        self.assertEqual(set(rec["tools"]), {"fake", "single"})
+        self.assertIn("| fake | github_release | ok |", (self.root / "TOOLS.md").read_text(encoding="utf-8"))
+        self.assertTrue(res["required_ok"])
+        hits = self.server.hits
+        res2 = self.T.sync(self.lock, self.root, approve=True)
+        self.assertEqual(res2["downloads"], 0)
+        self.assertEqual(self.server.hits, hits, "second sync must not download")
+        self.assertEqual({a["action"] for a in res2["actions"]}, {"none"})
+
+    def test_bad_hash_refuses_before_extraction(self):
+        self.lock["tools"][0]["asset_sha256"] = "0" * 64
+        res = self.T.sync(self.lock, self.root, approve=True, only=["fake"])
+        self.assertEqual(len(res["errors"]), 1)
+        self.assertIn("not extracted", res["errors"][0]["error"])
+        self.assertFalse((self.root / "Fake Tool 1.0").exists())
+
+    def test_unowned_folder_is_never_touched(self):
+        mine = write(self.root / "Fake Tool 1.0" / "my file.txt", "user data")
+        res = self.T.sync(self.lock, self.root, approve=True, only=["fake"])
+        self.assertEqual(len(res["errors"]), 1)
+        self.assertIn("does not own", res["errors"][0]["error"])
+        self.assertEqual(mine.read_text(encoding="utf-8"), "user data")
+        st = self.T.status(self.lock, self.root)
+        self.assertEqual({r["id"]: r["status"] for r in st["tools"]}["fake"], "unowned")
+
+    def test_tampered_exe_is_mismatch_and_resync_repairs(self):
+        self.T.sync(self.lock, self.root, approve=True)
+        (self.root / "Single" / "single.exe").write_bytes(b"tampered")
+        st = self.T.status(self.lock, self.root)
+        self.assertEqual({r["id"]: r["status"] for r in st["tools"]}["single"], "mismatch")
+        self.assertFalse(st["required_ok"])
+        res = self.T.sync(self.lock, self.root, approve=True)
+        self.assertEqual(res["installed"], ["single"])
+        self.assertEqual(res["downloads"], 0, "the cached asset is reused")
+
+    def test_manual_detection(self):
+        st = self.T.status(self.lock, self.root)
+        self.assertEqual({r["id"]: r["status"] for r in st["tools"]}["maybe"], "manual")
+        write(self.root / "Maybe 1" / "maybe.exe", b"x")
+        st = self.T.status(self.lock, self.root)
+        self.assertEqual({r["id"]: r["status"] for r in st["tools"]}["maybe"], "ok")
+
+    def test_real_lock_is_well_formed(self):
+        lock = self.T.load_lock()
+        ids = [t["id"] for t in lock["tools"]]
+        self.assertEqual(len(ids), len(set(ids)))
+        folders = [t["folder"].lower() for t in lock["tools"] if t.get("folder")]
+        self.assertEqual(len(folders), len(set(folders)))
+        for t in lock["tools"]:
+            self.assertIn(t["kind"], self.T.KINDS, t["id"])
+            if t["kind"] == "github_release":
+                for a in self.T.assets_of(t):
+                    self.assertRegex(a["sha256"], r"^[0-9a-f]{64}$", f"{t['id']} {a['name']} pinned")
+                if t.get("exe"):
+                    self.assertRegex(t["exe_sha256"], r"^[0-9a-f]{64}$", t["id"])
+                self.assertTrue(t.get("license"), t["id"])
+            if t["kind"] == "git_clone":
+                self.assertRegex(t["commit"], r"^[0-9a-f]{40}$", t["id"])
+
+
+# --- M3: archives, plugins, load order, worker, Spriggit -------------------------------------------
+
+def make_dds(w: int, h: int, mips: int, code: int, cube: bool = False, seed: int = 1) -> bytes:
+    from f4forge import dds as D
+    size = D.chain_size(w, h, mips, code, 6 if cube else 1)
+    body = bytes((i * seed + i // 7) & 0xFF for i in range(size))
+    return D.build_header(w, h, mips, code, cube) + body
+
+
+def make_record(sig: bytes, fid: int, subs: list[tuple[bytes, bytes]], compress: bool = False) -> bytes:
+    import zlib
+    data = b"".join(s + struct.pack("<H", len(b)) + b for s, b in subs)
+    flags = 0
+    if compress:
+        data = struct.pack("<I", len(data)) + zlib.compress(data)
+        flags |= plugin.FLAG_COMPRESSED
+    return sig + struct.pack("<IIIIHH", len(data), flags, fid, 0, 131, 0) + data
+
+
+def make_group(label: bytes, records: list[bytes]) -> bytes:
+    body = b"".join(records)
+    return b"GRUP" + struct.pack("<I4siHHI", 24 + len(body), label, 0, 0, 0, 0) + body
+
+
+def make_full_plugin(path: Path, masters=("Fallout4.esm",), hedr=1.0, flags=0, records=None) -> Path:
+    head = make_plugin(hedr, 131, 3, flags, masters)
+    records = records if records is not None else [
+        make_group(b"MISC", [make_record(b"MISC", 0x01000801, [(b"EDID", b"ItemOne\0")]),
+                             make_record(b"MISC", 0x01000802, [(b"EDID", b"ItemTwo\0")], compress=True)]),
+        make_group(b"WEAP", [make_record(b"WEAP", 0x00004822, [(b"EDID", b"Override10mm\0")])]),
+    ]
+    return write(path, head + b"".join(records))
+
+
+class Ba2Tests(Base):
+    def test_gnrl_roundtrip_and_hashes(self):
+        from f4forge import ba2
+        src = self.tmp / "src"
+        write(src / "Meshes" / "Thing.nif", b"nif" * 1000)
+        write(src / "Scripts" / "Thing.pex", b"pex data that stays stored" * 10)
+        write(src / "Materials" / "A.BGSM", b"m")
+        out = self.tmp / "Mod - Main.ba2"
+        res = ba2.pack(src, out)
+        self.assertEqual((res["type"], res["version"], res["files"]), ("GNRL", 1, 3))
+        arc = ba2.Archive(out)
+        names = sorted(e["name"] for e in arc.entries)
+        self.assertEqual(names, ["Materials\\A.BGSM", "Meshes\\Thing.nif", "Scripts\\Thing.pex"])
+        pex = arc.find("scripts/thing.pex")
+        self.assertEqual(pex["packed"], 0, "pex is stored like vanilla")
+        self.assertGreater(arc.find("Meshes\\Thing.nif")["packed"], 0)
+        self.assertEqual(arc.read(arc.find("Meshes\\Thing.nif")), b"nif" * 1000)
+        self.assertEqual(ba2.crc32_lower("keys"), 0x95CA9BF0, "vanilla Materials\\Keys.BGSM name hash")
+        self.assertEqual(ba2.crc32_lower("materials"), 0x7D1E021B)
+        ex = ba2.extract(arc, self.tmp / "x")
+        self.assertEqual(ex["files"], 3)
+        self.assertEqual((self.tmp / "x" / "Meshes" / "Thing.nif").read_bytes(), b"nif" * 1000)
+        res8 = ba2.pack(src, self.tmp / "v8.ba2", version=8)
+        self.assertEqual(ba2.Archive(self.tmp / "v8.ba2").version, 8)
+        self.assertEqual(ba2.verify(out)["ok"], True)
+
+    def test_dx10_roundtrip_chunks_and_header(self):
+        from f4forge import ba2, dds
+        src = self.tmp / "tex"
+        write(src / "Textures" / "Big_d.dds", make_dds(1024, 1024, 11, 71))
+        write(src / "Textures" / "Wide_n.dds", make_dds(1024, 256, 11, 83, seed=3))
+        write(src / "Textures" / "Small_s.dds", make_dds(256, 256, 9, 98, seed=5))
+        write(src / "Textures" / "Sky_e.dds", make_dds(64, 64, 7, 87, cube=True, seed=7))
+        out = self.tmp / "Mod - Textures.ba2"
+        res = ba2.pack(src, out)
+        self.assertEqual(res["type"], "DX10")
+        self.assertEqual(res["load"], "NOT RUN")
+        arc = ba2.Archive(out)
+        plans = {e["name"].split("\\")[-1]: [(c["mip_first"], c["mip_last"]) for c in e["chunks"]] for e in arc.entries}
+        self.assertEqual(plans["Big_d.dds"], [(0, 0), (1, 1), (2, 10)])
+        self.assertEqual(plans["Wide_n.dds"], [(0, 0), (1, 10)])
+        self.assertEqual(plans["Small_s.dds"], [(0, 8)])
+        self.assertEqual(plans["Sky_e.dds"], [(0, 6)])
+        for name in plans:
+            orig = (src / "Textures" / name).read_bytes()
+            got = arc.read(arc.find("Textures\\" + name))
+            self.assertEqual(got[dds.header_size(got):], orig[dds.header_size(orig):], name)
+            a, b = dds.parse(got), dds.parse(orig)
+            self.assertEqual((a["width"], a["height"], a["mips"], a["dxgi"], a["cubemap"]),
+                             (b["width"], b["height"], b["mips"], b["dxgi"], b["cubemap"]), name)
+
+    def test_rejects_bad_archives(self):
+        from f4forge import ba2
+        from f4forge.util import ForgeError
+        with self.assertRaises(ForgeError):
+            ba2.Archive(write(self.tmp / "x.ba2", b"NOPE" + b"\0" * 40))
+        with self.assertRaises(ForgeError):
+            ba2.Archive(write(self.tmp / "y.ba2", struct.pack("<4sI4sIQ", b"BTDX", 2, b"GNRL", 0, 24)))
+        self.assertFalse(ba2.verify(self.tmp / "x.ba2")["ok"])
+
+    def test_extract_refuses_game_folder(self):
+        from f4forge import ba2
+        from f4forge.util import ForgeError
+        with self.assertRaises(ForgeError):
+            ba2.guard_out(self.game / "Data" / "out", self.game)
+
+    def test_dds_legacy_and_dx10_headers(self):
+        from f4forge import dds
+        for code in (71, 77, 80, 83, 87, 28, 61, 98, 99, 72):
+            d = make_dds(128, 64, 8, code)
+            info = dds.parse(d)
+            self.assertEqual(info["dxgi"], code, dds.format_name(code))
+            self.assertEqual(info["payload_bytes"], info["payload_expected"])
+
+
+class PluginTests(Base):
+    def test_walker_counts_types_formids_edids(self):
+        p = make_full_plugin(self.tmp / "My Mod.esp")
+        r = plugin.inspect(p, edids=True)
+        self.assertEqual(r["records_walked"], 3)
+        self.assertEqual(r["groups"], 2)
+        self.assertEqual(r["types"], {"MISC": 2, "WEAP": 1})
+        self.assertEqual(r["formids"]["new"], 2)
+        self.assertEqual(r["formids"]["overrides_by_master"], {"Fallout4.esm": 1})
+        self.assertEqual(r["compressed_records"], 1)
+        self.assertEqual(r["edid_sample"]["ItemTwo"], "01000802", "compressed record inflated")
+
+    def test_light_range_rules(self):
+        ok = plugin.esl_check(make_full_plugin(self.tmp / "ok.esp"))
+        self.assertTrue(ok["ok"])
+        self.assertEqual(ok["allowed_range"], ["001", "FFF"])
+        self.assertIn("LIGHT-ELIGIBLE", [w["code"] for w in ok["warnings"]])
+        low = make_full_plugin(self.tmp / "low.esl", masters=("Fallout4.esm",), hedr=0.95, flags=plugin.FLAG_ESL, records=[
+            make_group(b"MISC", [make_record(b"MISC", 0x01000010, [(b"EDID", b"Low\0")])])])
+        r = plugin.esl_check(low)
+        self.assertEqual(r["allowed_range"], ["800", "FFF"], "HEDR 0.95 keeps the 0x800 floor")
+        self.assertIn("LIGHT-BELOW-FLOOR", [e["code"] for e in r["errors"]])
+        nomaster = make_full_plugin(self.tmp / "nm.esl", masters=(), hedr=1.0, flags=plugin.FLAG_ESL, records=[
+            make_group(b"MISC", [make_record(b"MISC", 0x00000010, [(b"EDID", b"X\0")])])])
+        self.assertEqual(plugin.esl_check(nomaster)["allowed_range"], ["800", "FFF"], "the 0x001 floor needs a master")
+        high = make_full_plugin(self.tmp / "hi.esl", flags=plugin.FLAG_ESL, records=[
+            make_group(b"MISC", [make_record(b"MISC", 0x01001000, [(b"EDID", b"Hi\0")])])])
+        self.assertIn("LIGHT-ABOVE-MAX", [e["code"] for e in plugin.esl_check(high)["errors"]])
+
+    def test_cli_resolves_data_names(self):
+        code, r = run_cli("plugin", "inspect", "Fallout4.esm")
+        self.assertEqual(code, 0)
+        self.assertEqual(r["hedr_version"], 1.0)
+
+
+class LoadOrderTests(Base):
+    def test_active_order_and_missing_masters(self):
+        from f4forge import loadorder
+        write(self.game / "Data" / "Needs.esp", make_plugin(1.0, 131, 1, 0, ("Fallout4.esm", "Absent.esm")))
+        ptxt = write(self.tmp / "appdata" / "plugins.txt", "# comment\n*MyMod.esp\nInactive.esp\n*Needs.esp\n*Gone.esp\n")
+        r = loadorder.load_order(self.game, ptxt)
+        self.assertEqual(r["plugins_txt_starred"], 3)
+        self.assertEqual(r["active_from_plugins_txt"], 2)
+        self.assertEqual([o["plugin"] for o in r["order"]][:3], ["Fallout4.esm", "DLCCoast.esm", "ccTest-Thing.esl"])
+        self.assertEqual(r["missing_files"], ["Gone.esp"])
+        self.assertEqual(r["missing_masters"], [{"plugin": "Needs.esp", "missing": ["Absent.esm"]}])
+        code, out = run_cli("loadorder", "--plugins-txt", str(ptxt))
+        self.assertEqual(code, 1)
+
+
+def _worker_ready() -> bool:
+    try:
+        from f4forge import records
+        return records.status()["built"]
+    except Exception:
+        return False
+
+
+def _tool_ready(tid: str) -> bool:
+    try:
+        from f4forge import tools
+        return tools.find_exe(tid) is not None
+    except Exception:
+        return False
+
+
+def _real_paths() -> dict:
+    env = {}
+    try:
+        from f4forge import records, tools
+        if records.status()["built"]:
+            env["F4FORGE_WORKER_EXE"] = str(records.worker_exe())
+        env["F4FORGE_TOOLS_ROOT"] = str(tools.tools_root())
+    except Exception:
+        pass
+    return env
+
+
+REAL_PATHS = _real_paths()
+
+
+class WorkerTests(Base):
+    """Uses the worker and tools of this machine (read from the real forge home before the test home is set)."""
+
+    def setUp(self):
+        super().setUp()
+        self._saved = {k: os.environ.get(k) for k in REAL_PATHS}
+        os.environ.update(REAL_PATHS)
+
+    def tearDown(self):
+        for k, v in self._saved.items():
+            if v is None:
+                os.environ.pop(k, None)
+            else:
+                os.environ[k] = v
+        super().tearDown()
+
+    @unittest.skipUnless(_worker_ready(), "records worker not built (f4forge worker build)")
+    def test_worker_new_agrees_with_python_reader(self):
+        from f4forge import records
+        target = self.tmp / "Agree Test.esp"
+        for edid in ("AgreeA", "AgreeB"):
+            r = records.call({"verb": "new", "target": str(target), "type": "MISC", "edid": edid, "light": True, "floor": 0x800})
+            self.assertTrue(r["ok"], r)
+        r = records.call({"verb": "new", "target": str(target), "type": "QUST", "edid": "AgreeQuest", "floor": 0x800})
+        self.assertEqual(r["object_id"], "000802")
+        info = plugin.inspect(target, edids=True)
+        self.assertEqual(info["types"], {"MISC": 2, "QUST": 1})
+        self.assertEqual(info["edid_sample"], {"AgreeA": "00000800", "AgreeB": "00000801", "AgreeQuest": "00000802"})
+        self.assertTrue(info["light"])
+        self.assertTrue(plugin.esl_check(target)["ok"])
+        with self.assertRaises(Exception):
+            records.call({"verb": "new", "target": str(target), "type": "MISC", "edid": "AgreeA", "floor": 0x800})
+
+    @unittest.skipUnless(_worker_ready() and _tool_ready("spriggit"), "worker or Spriggit missing")
+    def test_spriggit_roundtrip_of_worker_plugin(self):
+        from f4forge import records, spriggit
+        target = self.tmp / "Sprig.esp"
+        records.call({"verb": "new", "target": str(target), "type": "MISC", "edid": "SprigItem", "floor": 0x800})
+        rt = spriggit.roundtrip(target, self.tmp / "rt")
+        self.assertTrue(rt["record_equal"], rt)
+
+
 if __name__ == "__main__":
     unittest.main()
