@@ -30,7 +30,7 @@ Start of every build session: read PLAN.md, this file and LOCAL.md; run `f4forge
 
 ## Evidence (details per task in PLAN.md)
 
-- Tests: 87 offline tests green (synthetic fixtures only); `f4forge selftest` exit 0; `f4forge doctor` exit 0 with
+- Tests: 85 offline tests green (synthetic fixtures only); `f4forge selftest` exit 0; `f4forge doctor` exit 0 with
   all five sections ok on this PC.
 - Installed truth: runtime 1.11.240.0, F4SE 0.7.9 matching, Address Library present, Creation Kit 1.11.246.0.
 - Archives: 643/643 parse; Materials.ba2 and TexturesPatch.ba2 repacked identically, Archive2 agrees; 26081
