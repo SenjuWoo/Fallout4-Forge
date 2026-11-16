@@ -270,6 +270,24 @@ internal static class Program
             ?? throw new Failure($"no concrete class for {setter.Name}");
         var rec = (IMajorRecord)System.Activator.CreateInstance(concrete, fk, Fallout4Release.Fallout4)!;
         rec.EditorID = edid;
+        var script = Str(req, "script");
+        if (rec is Quest quest)
+        {
+            if (script != null)
+            {
+                quest.VirtualMachineAdapter = new QuestAdapter();
+                quest.VirtualMachineAdapter.Scripts.Add(new ScriptEntry { Name = script });
+            }
+            if (Bool(req, "start_enabled"))
+            {
+                quest.Data ??= new QuestData();
+                quest.Data.Flags |= Quest.Flag.StartGameEnabled;
+            }
+        }
+        else if (script != null)
+        {
+            throw new Failure($"attaching a script on create is supported for QUST here, not {sig}", "attach it in the Creation Kit or override the record");
+        }
         group.AddUntyped(rec);
         mod.ModHeader.Stats.NextFormID = next + 1;
         Write(mod, target, lo);

@@ -246,7 +246,7 @@ def cmd_records(args):
         if not (args.type and args.edid):
             raise ForgeError("records new needs --type and --edid", "f4forge records new --type MISC --edid MyItem")
         req = {"verb": "new", "target": str(target), "type": args.type, "edid": args.edid, "light": args.light,
-               "master": args.master, "floor": floor}
+               "master": args.master, "floor": floor, "script": args.script, "start_enabled": args.start_enabled}
         if plugins:
             req.update(R.base_request(game_root, plugins))
     r = R.call(req)
@@ -880,6 +880,8 @@ def parser() -> argparse.ArgumentParser:
     s.add_argument("--target", help="override/new/validate: plugin file to write or check (default: project build plugin)")
     s.add_argument("--light", action="store_true", help="new plugin: set the ESL flag")
     s.add_argument("--master", action="store_true", help="new plugin: set the ESM flag")
+    s.add_argument("--script", help="new QUST: attach this Papyrus script (VMAD)")
+    s.add_argument("--start-enabled", action="store_true", help="new QUST: Start Game Enabled")
     s.add_argument("--project", help="project folder (default: current folder or a parent with f4forge.json)")
     s = add("loadorder", cmd_loadorder, "active load order: implicit masters, Creation Club, plugins.txt, missing masters")
     s.add_argument("--plugins-txt", help="plugins.txt to read (default: %%LOCALAPPDATA%%\\Fallout4\\plugins.txt)")

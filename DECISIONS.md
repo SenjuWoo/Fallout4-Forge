@@ -60,3 +60,10 @@ Settled during planning (PLAN.md, D1-D15). Not reopened by the build.
   member `parent` (a Caprica keyword) to `parent_`. Scripts that read that member use the official
   compiler. The game's own Data/Scripts/Source is mirrored without its Base/DLC folders because Caprica
   scans imports recursively.
+- B16 (T37) The bundle's `companion_registry.py --roots` feeds only the status search, not the merge of
+  self-registered manifests, and its JSON omits `self_registered`. Self-registration was verified after adding
+  the tool-root line (text output shows the manifest; no skipped lines). Field report filed to the bundle.
+- B17 (T36) `Install.ps1 -NoPath` skips the user PATH change, so a temporary install (T44 release check with a
+  temp F4FORGE_HOME) never leaves a PATH entry behind.
+- B18 (T40) `records new --type QUST --script <Name> [--start-enabled]` attaches the script (VMAD) and the
+  Start Game Enabled flag when the quest is created, so a smoke mod needs no Creation Kit session.
