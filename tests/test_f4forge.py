@@ -1348,5 +1348,87 @@ class ProjectTests(Base):
         self.assertIn("- Version: 0.2.0", (out / "STATE.md").read_text(encoding="utf-8"))
 
 
+# --- M8: knowledge topics, skill, hygiene ---------------------------------------------------------------------
+
+class TopicTests(unittest.TestCase):
+    def test_topics_exist_cite_verified_facts_and_stay_small(self):
+        from f4forge.util import KNOWLEDGE_DIR
+        facts = knowledge.fact_index()
+        routes = knowledge.load("routes.json")
+        names = set(routes["topics"]) | {t for r in routes["routes"] for t in r["knowledge"]}
+        self.assertEqual(len(routes["topics"]), 28)
+        for name in sorted(names):
+            p = KNOWLEDGE_DIR / f"{name}.md"
+            self.assertTrue(p.is_file(), name)
+            self.assertLessEqual(p.stat().st_size, 3072, name)
+            text = p.read_text(encoding="utf-8")
+            cited = re.findall(r"\[fact:([a-z0-9_.\-]+)\]", text)
+            self.assertTrue(cited, f"{name} cites no fact")
+            for c in cited:
+                self.assertIn(c, facts, f"{name}: unknown fact {c}")
+                self.assertNotEqual(facts[c]["tier"], "unverified", f"{name}: cites unverified {c}")
+            for ln in text.splitlines():
+                if ln.startswith("- "):
+                    self.assertRegex(ln, r"\[fact:[a-z0-9_.\-]+\]\s*$", f"{name}: rule without a fact tag: {ln[:60]}")
+
+    def test_knowledge_command_prints_a_topic(self):
+        code, out = run_cli("knowledge", "archives")
+        self.assertEqual(code, 0)
+        self.assertEqual(out["facts_missing"], [])
+        self.assertIn("ba2.hashes", out["facts_cited"])
+
+
+class SkillTests(unittest.TestCase):
+    def test_skill_small_and_audited(self):
+        skill = ROOT / "skills" / "fallout4-forge" / "SKILL.md"
+        self.assertLessEqual(skill.stat().st_size, 4096)
+        self.assertTrue(skill.read_text(encoding="utf-8").startswith("---\nname: fallout4-forge\n"))
+        bundle = os.environ.get("UABS_BUNDLE_ROOT")
+        audit = Path(bundle) / "TOOLS" / "audit_skills.py" if bundle else None
+        if audit and audit.is_file():
+            r = subprocess.run([sys.executable, str(audit), str(ROOT / "skills")], capture_output=True, text=True)
+            self.assertIn("RESULT: PASS", r.stdout)
+
+    def test_selftest_passes(self):
+        code, out = run_cli("selftest")
+        self.assertEqual(code, 0, out["failed"])
+
+
+class HygieneTests(unittest.TestCase):
+    """No tracked file carries a drive letter path, a user folder or the operator's account name."""
+    PATTERNS = [re.compile(r"(?<![A-Za-z0-9])[A-Za-z]:[\\/](?:Users|Program Files|Backup|SteamLibrary)", re.I),
+                re.compile(r"[\\/]Users[\\/][A-Za-z0-9._-]+[\\/]", re.I),
+                re.compile(r"%USERPROFILE%[\\/][^%\s]*?(Desktop|Downloads)", re.I)]
+
+    def hygiene_problems(self, files: list[Path]) -> list[str]:
+        problems = []
+        user = os.environ.get("USERNAME") or os.environ.get("USER") or ""
+        for p in files:
+            if p.suffix.lower() in BINARY_SUFFIXES or p.name in ("packages.lock.json",):
+                continue
+            try:
+                text = p.read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+            for rx in self.PATTERNS:
+                m = rx.search(text)
+                if m:
+                    problems.append(f"{p.relative_to(ROOT) if ROOT in p.parents else p.name}: {m.group(0)}")
+            if len(user) >= 4 and re.search(r"(?<![A-Za-z])" + re.escape(user) + r"(?![A-Za-z])", text, re.I):
+                problems.append(f"{p.name}: contains the account name")
+        return problems
+
+    def test_tree_is_clean(self):
+        self.assertEqual(self.hygiene_problems(repo_files(ROOT)), [])
+
+    def test_planted_path_is_caught(self):
+        tmp = Path(tempfile.mkdtemp(prefix="f4forge-hyg-"))
+        try:
+            bad = write(tmp / "x.md", "see C:\\Users\\someone\\stuff")
+            self.assertTrue(self.hygiene_problems([bad]))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+
 if __name__ == "__main__":
     unittest.main()

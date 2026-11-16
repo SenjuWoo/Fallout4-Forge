@@ -647,6 +647,12 @@ def cmd_conflicts(args):
     return out, 0
 
 
+def cmd_selftest(args):
+    from .selftest import run
+    r = run()
+    return r, (0 if r["ok"] else 1)
+
+
 def cmd_tools(args):
     from . import tools as T
     root = T.tools_root(args.tools_root) if args.action != "status" or args.tools_root else None
@@ -703,6 +709,7 @@ def parser() -> argparse.ArgumentParser:
 
     add("doctor", cmd_doctor, "health in sections: toolchain, game, payload, tools, worker")
     add("capabilities", cmd_capabilities, "list commands and arguments (generated from the parser)")
+    add("selftest", cmd_selftest, "offline self-test in a temp folder: data, topics, routing, BA2, materials, scaffold/check/package")
     s = add("plan", cmd_plan, "route a request: routes, commands in order, knowledge, tools and tiers, what to avoid")
     s.add_argument("request", nargs="+", help="what you want to make or fix, in words")
     s = add("knowledge", cmd_knowledge, "list knowledge topics or print one")
