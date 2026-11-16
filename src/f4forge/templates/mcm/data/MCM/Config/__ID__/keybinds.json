@@ -1,0 +1,6 @@
+{
+  "modName": "__ID__",
+  "keybinds": [
+    {"id": "Toggle", "desc": "Toggle __NAME__", "action": {"type": "CallFunction", "form": "__PLUGIN__|800", "function": "Toggle"}}
+  ]
+}

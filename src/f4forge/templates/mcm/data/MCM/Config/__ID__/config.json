@@ -1,0 +1,14 @@
+{
+  "modName": "__ID__",
+  "displayName": "__NAME__",
+  "minMcmVersion": 2,
+  "pluginRequirements": ["__PLUGIN__"],
+  "content": [
+    {"text": "__NAME__", "type": "section"},
+    {"id": "bEnabled:Main", "text": "Enabled", "type": "switcher", "help": "Turn __NAME__ on or off.",
+     "valueOptions": {"sourceType": "ModSettingBool"}},
+    {"id": "fStrength:Main", "text": "Strength", "type": "slider", "help": "How strong the effect is.",
+     "valueOptions": {"min": 0.0, "max": 2.0, "step": 0.1, "sourceType": "ModSettingFloat"}},
+    {"id": "Toggle", "text": "Toggle hotkey", "type": "hotkey", "help": "Press to toggle __NAME__."}
+  ]
+}

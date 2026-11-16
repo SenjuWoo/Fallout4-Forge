@@ -1,0 +1,9 @@
+{
+  "kind": "f4se",
+  "title": "Native F4SE plugin (CommonLibF4 template, xmake)",
+  "files": ["source/f4se/README.md"],
+  "generated": ["source/f4se/__ID__/ (commonlibf4-template + CommonLibF4, when the tools are synced)"],
+  "requires": [{"id": "f4se", "name": "Fallout 4 Script Extender", "nexus": "https://www.nexusmods.com/fallout4/mods/42147"},
+               {"id": "address-library", "name": "Address Library for F4SE Plugins", "nexus": "https://www.nexusmods.com/fallout4/mods/47327"}],
+  "notes": "Build with: f4forge native build source/f4se/__ID__ and copy the DLL to data/F4SE/Plugins. CommonLibF4 is GPL-3.0 with a modding exception: publish the source with the DLL."
+}

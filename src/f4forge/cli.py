@@ -206,6 +206,14 @@ def cmd_records(args):
     from .game import find_game
     game_root = find_game(args.game)[0]
     plugins = [p.strip() for p in args.plugins.split(",")] if args.plugins else None
+    if args.action == "find" and args.index:
+        if not args.edid:
+            raise ForgeError("records find --index needs --edid", "f4forge records find --index --edid 10mm")
+        from .index import find_records
+        rows = find_records(args.edid, args.limit)
+        if args.type:
+            rows = [r for r in rows if r["type"].upper() == args.type.upper()]
+        return {"source": "local index (f4forge index)", "count": len(rows), "results": rows}, (0 if rows else 1)
     if args.action == "find":
         if not (args.edid or args.name or args.type):
             raise ForgeError("records find needs --edid, --name or --type", "f4forge records find --edid 10mm --type WEAP")
@@ -521,6 +529,124 @@ def cmd_ck(args):
     return ck.run_job(args.action, root, args.plugin, args.approve, args.mode, args.scope, args.platform), 0
 
 
+def _project(args):
+    from .project import find_project
+    return find_project(getattr(args, "project", None))
+
+
+def cmd_new(args):
+    import re as _re
+    from pathlib import Path
+
+    from .project import make_id, new_project
+    kinds = args.kind or ["plugin"]
+    folder = _re.sub(r'[<>:"/\\|?*\x00-\x1f]', "", args.name).strip(". ") or make_id(args.name)
+    out = Path(args.out) if args.out else Path.cwd() / folder
+    if args.out is None:
+        from .home import config_value
+        ws = config_value("workspace_root")
+        if ws and Path(ws).is_dir():
+            out = Path(ws) / folder
+    return new_project(args.name, kinds, out, args.author or "", args.description or "", not args.full_plugin, args.force), 0
+
+
+def cmd_templates(args):
+    from .project import templates
+    return {"templates": [{"kind": k, "title": v.get("title"), "files": v.get("files", []), "generated": v.get("generated", []),
+                           "requires": [r["name"] for r in v.get("requires", [])], "notes": v.get("notes", "")}
+                          for k, v in templates().items()]}, 0
+
+
+def cmd_build(args):
+    from .project import build
+    r = build(_project(args), _game_root_or_none(args), args.skip)
+    return r, (0 if r["ok"] else 1)
+
+
+def cmd_check(args):
+    from .check import check_project
+    r = check_project(_project(args), args.game, args.compile)
+    return r, (0 if r["ok"] else 1)
+
+
+def cmd_package(args):
+    from pathlib import Path
+
+    from .package import build
+    r = build(_project(args), Path(args.out) if args.out else None, True if args.archives else None,
+              args.ba2_version, True if args.fomod else None)
+    return r, (0 if r["validation"]["ok"] else 1)
+
+
+def cmd_validate(args):
+    from pathlib import Path
+
+    from .package import validate
+    r = validate(Path(args.zip))
+    if args.simulate is not None and r.get("fomod"):
+        import zipfile
+
+        from .fomod import simulate
+        with zipfile.ZipFile(args.zip) as zf:
+            r["simulation"] = simulate(zf, args.simulate)
+    return r, (0 if r["ok"] else 1)
+
+
+def cmd_deploy(args):
+    from .deploy import deploy
+    return deploy(_project(args), _game_root_or_none(args), args.approve, args.force, args.to, args.enable_plugin), 0
+
+
+def cmd_undeploy(args):
+    from .deploy import undeploy
+    return undeploy(_project(args), _game_root_or_none(args), args.approve, args.to), 0
+
+
+def cmd_bump(args):
+    from .project import bump
+    return bump(_project(args), args.part), 0
+
+
+def cmd_nexus(args):
+    from . import nexus
+    if args.action == "mod":
+        if not args.query:
+            raise ForgeError("nexus mod needs an ID", "f4forge nexus mod 42147")
+        return nexus.mod(int(args.query[0]), args.game_domain, args.description), 0
+    if args.action == "find":
+        if not args.query:
+            raise ForgeError("nexus find needs a name", "f4forge nexus find RobCo Patcher")
+        return {"results": nexus.find(" ".join(args.query), args.game_domain, args.limit)}, 0
+    return nexus.page_kit(_project(args)), 0
+
+
+def cmd_conflicts(args):
+    from .datakinds import replacer_report
+    from .game import find_game
+    from .index import asset_source, assets
+    from .project import load_manifest, plugin_build_path
+    root = _project(args)
+    m = load_manifest(root)
+    game_root = find_game(args.game)[0]
+    out = {"project": str(root)}
+    inst = assets(game_root)
+    if inst is None:
+        out["assets"] = {"skipped": "no asset index", "fix": "f4forge index"}
+    else:
+        rep = replacer_report(root / "data", inst)
+        out["assets"] = {"replaces_installed": [{"file": f, "provided_by": asset_source(f)} for f in rep["replaces_installed"][: args.limit]],
+                         "count": len(rep["replaces_installed"])}
+    if m.get("plugin"):
+        bp = (root / "data" / m["plugin"]["name"]) if (root / "data" / m["plugin"]["name"]).is_file() else plugin_build_path(root, m)
+        if bp.is_file():
+            from . import records as R
+            try:
+                out["records"] = R.call({"verb": "overlap", **R.base_request(game_root, None), "target": str(bp), "limit": args.limit})
+            except ForgeError as e:
+                out["records"] = {"skipped": str(e), "fix": e.fix}
+    return out, 0
+
+
 def cmd_tools(args):
     from . import tools as T
     root = T.tools_root(args.tools_root) if args.action != "status" or args.tools_root else None
@@ -666,6 +792,54 @@ def parser() -> argparse.ArgumentParser:
     s.add_argument("--scope", default="all", choices=["all", "main", "ints", "other"], help="precombine/previs: cells")
     s.add_argument("--platform", default="X64", choices=["X64", "W32", "XB1", "PS4"], help="facegen: platform")
     s.add_argument("--approve", action="store_true", help="really run / install (writes into the game folder)")
+    s = add("templates", cmd_templates, "list project kinds and what each scaffolds")
+    s = add("new", cmd_new, "create a mod project (default folder: the workspace root) from one or more kinds")
+    s.add_argument("name", help="mod name")
+    s.add_argument("--kind", action="append", help="kind (repeatable): plugin papyrus mcm robco bos f4se textures materials "
+                                                   "mesh looksmenu bodyslide audio")
+    s.add_argument("--out", help="project folder (default: <workspace_root>/<Name>, else ./<Name>)")
+    s.add_argument("--author", help="author")
+    s.add_argument("--description", help="one-line description")
+    s.add_argument("--full-plugin", action="store_true", help="plugin without the ESL flag")
+    s.add_argument("--force", action="store_true", help="add kinds to an existing project folder")
+    for name, fn, desc in (("build", cmd_build, "build the payload: plugin from YAML, scripts, materials, textures, voice"),
+                           ("check", cmd_check, "validate the project: plugin, scripts, configs, assets, references, privacy; evidence tiers"),
+                           ("package", cmd_package, "deterministic release zip from data/ (+ BA2, FOMOD) with receipt and validation"),
+                           ("deploy", cmd_deploy, "copy data/ into the game (or --to a mod folder); dry run until --approve"),
+                           ("undeploy", cmd_undeploy, "remove what deploy wrote and restore backups; dry run until --approve"),
+                           ("bump", cmd_bump, "bump the version everywhere and keep the last good zip"),
+                           ("conflicts", cmd_conflicts, "project vs installed: replaced assets and contested record overrides")):
+        s = add(name, fn, desc)
+        s.add_argument("--project", help="project folder (default: current folder or a parent with f4forge.json)")
+        if name == "build":
+            s.add_argument("--skip", action="append", choices=["plugin", "scripts", "materials", "textures", "voice"], help="skip a step")
+        if name == "check":
+            s.add_argument("--compile", action="store_true", help="also compile the scripts")
+        if name == "package":
+            s.add_argument("--out", help="output folder (default: <project>/dist)")
+            s.add_argument("--archives", action="store_true", help="pack into <Plugin> - Main.ba2 / - Textures.ba2")
+            s.add_argument("--ba2-version", type=int, choices=[1, 7, 8], help="BA2 header version (default 1)")
+            s.add_argument("--fomod", action="store_true", help="add a basic FOMOD installer")
+        if name in ("deploy", "undeploy"):
+            s.add_argument("--approve", action="store_true", help="really copy/remove")
+            s.add_argument("--to", help="a mod-manager mod folder instead of the game's Data")
+        if name == "deploy":
+            s.add_argument("--force", action="store_true", help="back up and replace files this project did not deploy")
+            s.add_argument("--enable-plugin", action="store_true", help="also activate the plugin in plugins.txt (backed up)")
+        if name == "bump":
+            s.add_argument("part", help="major | minor | patch | X.Y.Z")
+        if name == "conflicts":
+            s.add_argument("--limit", type=int, default=100, help="max entries per list")
+    s = add("validate", cmd_validate, "check any mod zip: layout, paperwork, dev files, script sources, paths, secrets, FOMOD")
+    s.add_argument("zip", help="zip file")
+    s.add_argument("--simulate", nargs="*", help="FOMOD: simulate an install choosing these optional plugins")
+    s = add("nexus", cmd_nexus, "Nexus Mods: mod <id>, find <name> (public API, read-only), page (project page kit)")
+    s.add_argument("action", choices=["mod", "find", "page"], help="mod <id> | find <name> | page")
+    s.add_argument("query", nargs="*", help="mod ID or name")
+    s.add_argument("--game-domain", default="fallout4", help="Nexus game domain")
+    s.add_argument("--description", action="store_true", help="mod: include the description text")
+    s.add_argument("--limit", type=int, default=10, help="find: max results")
+    s.add_argument("--project", help="page: project folder")
     s = add("nif", cmd_nif, "NIF meshes: info (header, blocks, strings), refs (materials/textures checked)")
     s.add_argument("action", choices=["info", "refs"], help="info <nif> | refs <nif>")
     s.add_argument("target", help="NIF file")
@@ -692,6 +866,7 @@ def parser() -> argparse.ArgumentParser:
     s.add_argument("--name", help="find: display name text")
     s.add_argument("--type", help="record signature, e.g. WEAP, ARMO, MISC, QUST, OMOD, COBJ")
     s.add_argument("--exact", action="store_true", help="find: EditorID must match exactly")
+    s.add_argument("--index", action="store_true", help="find: use the local EditorID index (instant, no worker run)")
     s.add_argument("--limit", type=int, default=50, help="max results")
     s.add_argument("--plugin", help="find: only this plugin; conflicts: the plugin to check")
     s.add_argument("--plugins", help="restrict the load order to these comma-separated plugins (faster)")

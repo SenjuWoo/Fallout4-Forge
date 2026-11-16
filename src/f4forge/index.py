@@ -78,17 +78,13 @@ def build_scripts(game_root: Path) -> dict:
 
 
 def build_records(game_root: Path) -> dict:
-    """EditorID -> FormKey for every installed plugin, through the records worker (written as JSON lines)."""
+    """EditorID -> FormKey (winning override) for every active plugin, through the records worker (JSON lines)."""
     from . import records as R
     t = time.time()
-    req = {"verb": "find", **R.base_request(game_root, None), "edid": "", "limit": 10_000_000}
-    res = R.call(req, timeout=7200)
-    rows = res.get("results", [])
-    with open(index_dir() / "records.jsonl", "w", encoding="utf-8", newline="\n") as f:
-        for r in rows:
-            f.write(json.dumps({"edid": r.get("editor_id"), "formkey": r["formkey"], "type": r["type"],
-                                "winning": r.get("winning")}) + "\n")
-    return {"records": len(rows), "plugins": res.get("plugins"), "seconds": round(time.time() - t, 1)}
+    out = index_dir() / "records.jsonl"
+    res = R.call({"verb": "index", **R.base_request(game_root, None), "out": str(out)}, timeout=7200)
+    return {"records": res.get("records"), "scanned": res.get("scanned"), "plugins": res.get("plugins"),
+            "seconds": round(time.time() - t, 1)}
 
 
 def build(game_root: Path, records: bool = True) -> dict:

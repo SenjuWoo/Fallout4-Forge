@@ -1,0 +1,7 @@
+{
+  "kind": "looksmenu",
+  "title": "LooksMenu preset",
+  "files": ["data/F4SE/Plugins/F4EE/Presets/__ID__.json"],
+  "requires": [{"id": "looksmenu", "name": "LooksMenu", "nexus": "https://www.nexusmods.com/fallout4/mods/12631"}],
+  "notes": "Save a preset in game with LooksMenu and copy it over this file, or edit the values here."
+}

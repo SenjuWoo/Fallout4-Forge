@@ -1246,5 +1246,107 @@ class NativeLogsCkTests(Base):
             ck.plan("previs", self.game, "NotThere.esp")
 
 
+# --- M7: projects, check, package, deploy ---------------------------------------------------------------------
+
+class ProjectTests(Base):
+    def test_scaffold_every_kind_matches_template_and_checks_clean(self):
+        from f4forge import check, project
+        for kind in project.KINDS:
+            out = self.tmp / "projects" / f"Kind {kind}"
+            r = project.new_project(f"Kind {kind}", [kind], out, "tester", "test")
+            mid = r["id"]
+            t = project.templates()[kind]
+            for rel in t["files"]:
+                self.assertTrue((out / rel.replace("__ID__", mid)).is_file(), f"{kind}: {rel}")
+            for p in project.PAPERWORK:
+                self.assertTrue((out / p).is_file(), f"{kind}: {p}")
+            m = project.load_manifest(out)
+            self.assertEqual(m["kinds"], [kind])
+            if kind in ("plugin", "papyrus", "mcm", "audio"):
+                self.assertTrue(project.plugin_build_path(out, m).is_file(), kind)
+                self.assertTrue(plugin.read_header(project.plugin_build_path(out, m))["esl"])
+            res = check.check_project(out)
+            self.assertEqual(res["errors"], [], f"{kind}: {res['errors']}")
+            self.assertEqual(res["evidence"]["load"], "NOT RUN")
+
+    def test_template_files_cover_the_template_tree(self):
+        from f4forge import project
+        from f4forge.util import TEMPLATES_DIR
+        for kind, t in project.templates().items():
+            on_disk = sorted(p.relative_to(TEMPLATES_DIR / kind).as_posix() for p in (TEMPLATES_DIR / kind).rglob("*")
+                             if p.is_file() and p.name != "template.json")
+            self.assertEqual(on_disk, sorted(t["files"]), kind)
+
+    def test_package_deterministic_and_validate_rejections(self):
+        import zipfile
+        from f4forge import package, project
+        out = self.tmp / "Pkg"
+        project.new_project("Pkg", ["mcm", "looksmenu"], out)
+        a = package.build(out)
+        self.assertTrue(a["validation"]["ok"], a["validation"]["errors"])
+        b = package.build(out)
+        self.assertEqual(a["sha256"], b["sha256"])
+        self.assertTrue(json.loads(Path(a["receipt"]).read_text(encoding="utf-8"))["inputs"])
+        for name, data, code in (("STATE.md", b"x", "ZIP-PAPERWORK"), ("Scripts/Foo.psc", b"ScriptName Foo", "ZIP-PSC"),
+                                 ("MCM/Config/X/config.json", b'{"p": "C:\\\\Users\\\\someone\\\\x"}', "PRIVATE-PATH"),
+                                 ("../escape.txt", b"x", "ZIP-PATH")):
+            z = self.tmp / f"bad-{code}.zip"
+            with zipfile.ZipFile(z, "w") as zf:
+                zf.writestr("Pkg.esp", b"TES4")
+                zf.writestr(name, data)
+            v = package.validate(z)
+            self.assertFalse(v["ok"], code)
+            self.assertIn(code, [e["code"] for e in v["errors"]], code)
+
+    def test_fomod_generate_validate_simulate(self):
+        import zipfile
+        from f4forge import fomod, package, project
+        out = self.tmp / "Fo"
+        project.new_project("Fo", ["looksmenu"], out)
+        write(out / "data" / "Options" / "Extra" / "Textures" / "x.dds", make_dds(4, 4, 1, 71))
+        r = package.build(out, with_fomod=True)
+        self.assertTrue(r["validation"]["ok"], r["validation"]["errors"])
+        with zipfile.ZipFile(r["zip"]) as zf:
+            base = fomod.simulate(zf, [])
+            extra = fomod.simulate(zf, ["Extra"])
+        self.assertIn("F4SE/Plugins/F4EE/Presets/Fo.json", base["files"])
+        self.assertIn("Textures/x.dds", extra["files"])
+
+    def test_deploy_undeploy_in_temp_game(self):
+        from f4forge import deploy, project
+        out = self.tmp / "Dep"
+        project.new_project("Dep", ["looksmenu", "bos"], out)
+        dry = deploy.deploy(out, self.game)
+        self.assertTrue(dry["dry_run"])
+        target = self.game / "Data" / "Dep_SWAP.ini"
+        self.assertFalse(target.exists())
+        done = deploy.deploy(out, self.game, approve=True)
+        self.assertTrue(target.is_file())
+        self.assertTrue(Path(done["receipt"]).is_file())
+        self.assertTrue(str(Path(done["receipt"]).resolve()).startswith(str(self.tmp.resolve())))
+        other = self.tmp / "Other"
+        project.new_project("Other", ["looksmenu"], other)
+        write(other / "data" / "Dep_SWAP.ini", "[Forms]\n")
+        refused = deploy.deploy(other, self.game)
+        self.assertEqual(refused["refused"], ["Dep_SWAP.ini"])
+        from f4forge.util import ForgeError
+        with self.assertRaises(ForgeError):
+            deploy.deploy(other, self.game, approve=True)
+        und = deploy.undeploy(out, self.game, approve=True)
+        self.assertTrue(und["done"])
+        self.assertFalse(target.exists())
+
+    def test_bump_keeps_last_good(self):
+        from f4forge import package, project
+        out = self.tmp / "Bmp"
+        project.new_project("Bmp", ["looksmenu"], out)
+        package.build(out)
+        r = project.bump(out, "minor")
+        self.assertEqual((r["old"], r["new"]), ("0.1.0", "0.2.0"))
+        self.assertTrue((out / "dist" / "last-good" / "Bmp-0.1.0.zip").is_file())
+        self.assertIn("## 0.2.0", (out / "CHANGELOG.md").read_text(encoding="utf-8"))
+        self.assertIn("- Version: 0.2.0", (out / "STATE.md").read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     unittest.main()

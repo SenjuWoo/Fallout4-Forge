@@ -1,0 +1,9 @@
+{
+  "kind": "robco",
+  "title": "RobCo Patcher runtime patch (leveled-list injection example)",
+  "files": ["data/F4SE/Plugins/RobCo_Patcher/leveledList/__ID__.ini"],
+  "requires": [{"id": "robco-patcher", "name": "RobCo Patcher", "nexus": "https://www.nexusmods.com/fallout4/mods/69798"},
+               {"id": "f4se", "name": "Fallout 4 Script Extender", "nexus": "https://www.nexusmods.com/fallout4/mods/42147"},
+               {"id": "address-library", "name": "Address Library for F4SE Plugins", "nexus": "https://www.nexusmods.com/fallout4/mods/47327"}],
+  "notes": "One patch per line; other record types go in the matching RobCo_Patcher/<folder>. Check with: f4forge check."
+}

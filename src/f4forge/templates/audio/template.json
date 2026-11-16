@@ -1,0 +1,7 @@
+{
+  "kind": "audio",
+  "title": "Voice lines (WAV + text in source/audio, built to FUZ in data/Sound/Voice)",
+  "files": ["source/audio/lines.json"],
+  "requires": [],
+  "notes": "List each line in lines.json (wav, text, voice_type, info FormID, response); f4forge build makes XWM + LIP + FUZ with the Creation Kit's tools."
+}

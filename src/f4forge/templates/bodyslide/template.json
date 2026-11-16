@@ -1,0 +1,7 @@
+{
+  "kind": "bodyslide",
+  "title": "BodySlide slider preset and slider group",
+  "files": ["data/Tools/BodySlide/SliderPresets/__ID__.xml", "data/Tools/BodySlide/SliderGroups/__ID__.xml"],
+  "requires": [{"id": "bodyslide", "name": "BodySlide and Outfit Studio", "nexus": "https://www.nexusmods.com/fallout4/mods/25"}],
+  "notes": "Add the outfit's slider sets to the group; build in BodySlide."
+}

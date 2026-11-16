@@ -1,0 +1,10 @@
+{
+  "kind": "bos",
+  "title": "Base Object Swapper rules (Data/<Id>_SWAP.ini)",
+  "files": ["data/__ID___SWAP.ini"],
+  "requires": [{"id": "base-object-swapper", "name": "Base Object Swapper", "nexus": "https://www.nexusmods.com/fallout4/mods/67528"},
+               {"id": "baka-framework", "name": "Baka Framework", "nexus": "https://www.nexusmods.com/fallout4/mods/43627"},
+               {"id": "f4se", "name": "Fallout 4 Script Extender", "nexus": "https://www.nexusmods.com/fallout4/mods/42147"},
+               {"id": "address-library", "name": "Address Library for F4SE Plugins", "nexus": "https://www.nexusmods.com/fallout4/mods/47327"}],
+  "notes": "Swapping statics and static collections fights precombines; prefer movable objects."
+}

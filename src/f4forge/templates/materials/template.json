@@ -1,0 +1,7 @@
+{
+  "kind": "materials",
+  "title": "Materials (BGSM/BGEM as JSON in source/materials, built to data/Materials)",
+  "files": ["source/materials/__ID__/__ID__Example.bgsm.json"],
+  "requires": [],
+  "notes": "Edit the JSON (f4forge material show turns any BGSM into this form); f4forge build writes data/Materials/__ID__/__ID__Example.bgsm."
+}

@@ -1,0 +1,8 @@
+{
+  "kind": "plugin",
+  "title": "Plugin records (Spriggit YAML tree in plugin/, built to build/data/<Plugin>)",
+  "files": [],
+  "generated": ["build/data/__PLUGIN__ (header-only light plugin)", "plugin/ (Spriggit tree, when Spriggit is installed)"],
+  "requires": [],
+  "notes": "Add records with: f4forge records new --type MISC --edid __ID__Item (writes the build plugin and refreshes plugin/). Build the plugin from YAML with: f4forge plugin build."
+}

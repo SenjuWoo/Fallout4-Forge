@@ -1,0 +1,7 @@
+{
+  "kind": "mesh",
+  "title": "Meshes (Blender sources in source/meshes, NIF output in data/Meshes)",
+  "files": ["source/meshes/README.md"],
+  "requires": [],
+  "notes": "Import a NIF: f4forge mesh import <nif> --out source/meshes/x.blend; export: f4forge mesh export source/meshes/x.blend --out data/Meshes/__ID__/x.nif; check references with f4forge nif refs."
+}

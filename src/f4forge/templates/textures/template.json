@@ -1,0 +1,7 @@
+{
+  "kind": "textures",
+  "title": "Textures (source images in source/textures, built to data/Textures as DDS by role)",
+  "files": ["source/textures/README.md"],
+  "requires": [],
+  "notes": "Put PNG/TGA files under source/textures/<path>/<name>_d.png (suffix = role); f4forge build converts them with texconv to data/Textures/<path>/<name>_d.dds."
+}

@@ -1,0 +1,7 @@
+{
+  "kind": "papyrus",
+  "title": "Papyrus scripts (source/Scripts, compiled to data/Scripts)",
+  "files": ["source/Scripts/__ID__QuestScript.psc"],
+  "requires": [{"id": "f4se", "name": "Fallout 4 Script Extender", "nexus": "https://www.nexusmods.com/fallout4/mods/42147", "when": "the script calls F4SE functions"}],
+  "notes": "Compile with: f4forge papyrus compile (default output data/Scripts). Attach the script to a quest record: f4forge records new --type QUST --edid __ID__Quest."
+}

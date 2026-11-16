@@ -1,0 +1,9 @@
+{
+  "kind": "mcm",
+  "title": "Mod Configuration Menu page with settings, a hotkey and the Papyrus listener",
+  "files": ["data/MCM/Config/__ID__/config.json", "data/MCM/Config/__ID__/settings.ini", "data/MCM/Config/__ID__/keybinds.json",
+            "source/Scripts/__ID__MCMScript.psc"],
+  "requires": [{"id": "mcm", "name": "Mod Configuration Menu", "nexus": "https://www.nexusmods.com/fallout4/mods/21497"},
+               {"id": "f4se", "name": "Fallout 4 Script Extender", "nexus": "https://www.nexusmods.com/fallout4/mods/42147"}],
+  "notes": "Attach __ID__MCMScript to a start-game-enabled quest in the plugin; the hotkey calls its Toggle() function through the quest (form __PLUGIN__|800 by default, change it to your quest's FormID)."
+}

@@ -33,6 +33,8 @@ internal static class Program
                 "override" => Override(req),
                 "new" => New(req),
                 "conflicts" => Conflicts(req),
+                "overlap" => Overlap(req),
+                "index" => Index(req),
                 "validate" => Validate(req),
                 _ => throw new Failure($"unknown verb {verb}")
             };
@@ -293,6 +295,66 @@ internal static class Program
                     if (hits.Count < limit) { var o = Brief(r, m.ModKey.FileName.String); hits.Add(o); }
                 }
         return new JsonObject { ["ok"] = true, ["plugin"] = plugin, ["records"] = mine.Count, ["overridden_later"] = total, ["results"] = hits };
+    }
+
+    // EditorID index of the whole load order, written as JSON lines (winning override per FormKey).
+    private static JsonObject Index(JsonObject req)
+    {
+        var mods = LoadMods(req, out _);
+        var outPath = Str(req, "out") ?? throw new Failure("out path missing");
+        var win = new Dictionary<FormKey, (string Edid, string Sig, string Mod)>();
+        long scanned = 0;
+        foreach (var mod in mods)
+        {
+            var name = mod.ModKey.FileName.String;
+            foreach (var r in mod.EnumerateMajorRecords())
+            {
+                scanned++;
+                string? e;
+                try { e = r.EditorID; } catch (Exception) { e = null; }
+                if (string.IsNullOrEmpty(e)) continue;
+                win[r.FormKey] = (e, SigOf(r), name);
+            }
+        }
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outPath))!);
+        using (var w = new StreamWriter(outPath, false, new System.Text.UTF8Encoding(false)))
+        {
+            foreach (var (fk, v) in win)
+                w.WriteLine(new JsonObject { ["edid"] = v.Edid, ["formkey"] = fk.ToString(), ["type"] = v.Sig, ["winning"] = v.Mod }.ToJsonString());
+        }
+        return new JsonObject { ["ok"] = true, ["plugins"] = mods.Count, ["scanned"] = scanned, ["records"] = win.Count, ["out"] = outPath };
+    }
+
+    // For a plugin outside the load order (a project's build plugin): which installed plugins also override
+    // the records it overrides. The target is appended last, as it would load.
+    private static JsonObject Overlap(JsonObject req)
+    {
+        var mods = LoadMods(req, out _);
+        var target = Str(req, "target") ?? throw new Failure("target plugin path missing");
+        if (!File.Exists(target)) throw new Failure($"plugin not found: {target}", "build it first");
+        var mine = Fallout4Mod.CreateFromBinaryOverlay(target, Fallout4Release.Fallout4);
+        var all = mods.Where(m => m.ModKey != mine.ModKey).ToList();
+        var cache = all.ToImmutableLinkCache();
+        var limit = Int(req, "limit", 200);
+        var hits = new JsonArray();
+        int overrides = 0, contested = 0;
+        foreach (var r in mine.EnumerateMajorRecords())
+        {
+            if (r.FormKey.ModKey == mine.ModKey) continue;
+            overrides++;
+            var chain = cache.ResolveAllContexts(r.FormKey, typeof(IMajorRecordGetter)).Select(c => c.ModKey.FileName.String).ToList();
+            var others = chain.Where(n => !n.Equals(r.FormKey.ModKey.FileName.String, StringComparison.OrdinalIgnoreCase)).ToList();
+            if (others.Count == 0) continue;
+            contested++;
+            if (hits.Count < limit)
+            {
+                var o = Brief(r);
+                o["also_overridden_by"] = new JsonArray(others.Select(x => (JsonNode)x).ToArray());
+                o["winning_without_you"] = chain.FirstOrDefault();
+                hits.Add(o);
+            }
+        }
+        return new JsonObject { ["ok"] = true, ["target"] = target, ["overrides"] = overrides, ["contested"] = contested, ["results"] = hits };
     }
 
     private static JsonObject Validate(JsonObject req)
