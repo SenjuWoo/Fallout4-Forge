@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "id": "fallout4-forge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "entry": {
     "root_env": "FALLOUT4_FORGE_ROOT",
     "title": "Fallout 4 Forge",

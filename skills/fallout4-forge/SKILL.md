@@ -5,7 +5,7 @@ description: Make, check, package and ship Fallout 4 mods with the f4forge CLI -
 
 # Fallout 4 Forge
 
-Version: 0.1.0
+Version: 0.1.1
 
 Every command prints JSON. Exit 0 ok, 1 findings, 2 named failure (read `fix`), 3 forge bug.
 

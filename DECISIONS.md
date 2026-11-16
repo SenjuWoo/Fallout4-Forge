@@ -67,3 +67,7 @@ Settled during planning (PLAN.md, D1-D15). Not reopened by the build.
   temp F4FORGE_HOME) never leaves a PATH entry behind.
 - B18 (T40) `records new --type QUST --script <Name> [--start-enabled]` attaches the script (VMAD) and the
   Start Game Enabled flag when the quest is created, so a smoke mod needs no Creation Kit session.
+- B19 (T44) v0.1.0 was published from the green SHA 8d9bbfa and its asset hash verified, but its test suite
+  walked the records worker's bin/obj folders (built by the installer) in an extracted copy and failed two
+  hygiene/line-ending tests. v0.1.0 stays as published; v0.1.1 fixes the test walker (it honours .gitignore
+  without git) and is the release verified end to end.

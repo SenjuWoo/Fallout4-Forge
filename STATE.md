@@ -1,6 +1,6 @@
 # STATE - Fallout 4 Forge
 
-- Version: 0.1.0 (release candidate; local gate passed, publication in progress).
+- Version: 0.1.1 (released; 0.1.0 published first, 0.1.1 fixes the test walker in extracted copies).
 - Phase: M0-M9 done; M10 (CI, publish, release, hand-off, close) in progress.
 
 ## NEXT ACTION

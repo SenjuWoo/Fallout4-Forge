@@ -139,11 +139,20 @@ def repo_files(root: Path) -> list[Path]:
                             capture_output=True, check=True)
         names = [n for n in cp.stdout.decode("utf-8").split("\0") if n]
         return [root / n for n in sorted(set(names)) if (root / n).is_file()]
-    skip = {".git", ".venv", "__pycache__", "build", "dist"}
+    # No git (an extracted source zip): honour the simple .gitignore entries so generated folders such as
+    # the worker's bin/ and obj/ (built by the installer) are not treated as source.
+    skip_dirs = {".git", ".venv", "__pycache__", "build", "dist", "bin", "obj", ".f4forge"}
+    skip_files = {"LOCAL.md", "FIELD-REPORTS.md"}
+    gi = root / ".gitignore"
+    if gi.is_file():
+        for ln in gi.read_text(encoding="utf-8").splitlines():
+            ln = ln.strip()
+            if ln and not ln.startswith("#") and "*" not in ln:
+                (skip_dirs if ln.endswith("/") else skip_files).add(ln.rstrip("/"))
     out = []
     for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in skip and not d.endswith(".egg-info")]
-        out += [Path(dirpath) / f for f in filenames if f not in ("LOCAL.md", "FIELD-REPORTS.md")]
+        dirnames[:] = [d for d in dirnames if d not in skip_dirs and not d.endswith(".egg-info")]
+        out += [Path(dirpath) / f for f in filenames if f not in skip_files and not f.endswith((".pyc", ".log"))]
     return sorted(out)
 
 
@@ -189,7 +198,7 @@ MIRROR_FILES = ("src/f4forge/__init__.py", "CHANGELOG.md", "STATE.md", "skills/f
 
 class CliContractTests(Base):
     def test_version_constant(self):
-        self.assertEqual(__version__, "0.1.0")
+        self.assertRegex(__version__, r"^\d+\.\d+\.\d+$")
 
     def test_json_compact_and_pretty(self):
         buf = io.StringIO()

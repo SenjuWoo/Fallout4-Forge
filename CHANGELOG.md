@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1 - 2026-11-15
+
+- Tests in an extracted source zip ignore generated folders (the records worker's bin/ and obj/, built by the
+  installer), so the suite passes after a release install.
+- Project ids keep acronyms ("CI Mod" -> "CIMod"), so file names match on case-sensitive file systems.
+- A test checks that every command a route suggests exists.
+
 ## 0.1.0 - 2026-11-15
 
 First release.
