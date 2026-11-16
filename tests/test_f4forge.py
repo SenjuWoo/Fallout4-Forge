@@ -551,6 +551,14 @@ class RoutingTests(Base):
         self.assertEqual(names, list(cli.subcommands(cli.parser())))
         self.assertEqual(len(names), len(set(names)))
 
+    def test_route_commands_exist(self):
+        cmds = set(cli.subcommands(cli.parser()))
+        for r in knowledge.load("routes.json")["routes"]:
+            for c in r["commands"]:
+                parts = c.split()
+                self.assertEqual(parts[0], "f4forge", c)
+                self.assertIn(parts[1], cmds, f"{r['id']}: {c}")
+
     def test_routes_reference_known_topics_and_tools(self):
         for r in knowledge.load("routes.json")["routes"]:
             self.assertTrue(r["commands"] and r["knowledge"] and r["avoid"], r["id"])
@@ -1268,6 +1276,13 @@ class ProjectTests(Base):
             res = check.check_project(out)
             self.assertEqual(res["errors"], [], f"{kind}: {res['errors']}")
             self.assertEqual(res["evidence"]["load"], "NOT RUN")
+
+    def test_make_id_keeps_acronyms(self):
+        from f4forge import project
+        self.assertEqual(project.make_id("CI Mod"), "CIMod")
+        self.assertEqual(project.make_id("Forge Smoke Test"), "ForgeSmokeTest")
+        self.assertEqual(project.make_id("my cool-mod 2"), "MyCoolMod2")
+        self.assertEqual(project.make_id("X"), "X")
 
     def test_template_files_cover_the_template_tree(self):
         from f4forge import project

@@ -53,7 +53,9 @@ def plugin_build_path(root: Path, manifest: dict) -> Path:
 
 
 def make_id(name: str) -> str:
-    s = re.sub(r"[^A-Za-z0-9]", "", name.title() if " " in name else name)
+    # Capitalise the first letter of each word but keep the rest ("CI Mod" -> "CIMod", "my mod" -> "MyMod").
+    words = re.split(r"[^A-Za-z0-9]+", name)
+    s = "".join(w[:1].upper() + w[1:] for w in words if w)
     if not s:
         raise ForgeError(f"'{name}' has no letters or digits", "choose another name")
     return s[:40]
