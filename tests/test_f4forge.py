@@ -928,5 +928,90 @@ class WorkerTests(Base):
         self.assertTrue(rt["record_equal"], rt)
 
 
+# --- M4: Papyrus ------------------------------------------------------------------------------------
+
+STUBS = ROOT / "tests" / "fixtures" / "psc-stubs"
+SMOKE_PSC = ('ScriptName ForgeSmokeQuest extends Quest\n\nEvent OnQuestInit()\n'
+             '    Debug.Trace("smoke " + F4SE.GetVersion() + "." + F4SE.GetVersionMinor())\nEndEvent\n')
+BROKEN_PSC = 'ScriptName ForgeBroken extends Quest\n\nEvent OnQuestInit()\n    Debug.Trace("x" +)\nEndEvent\n'
+
+
+def make_pex(name: str, parent: str, source: str) -> bytes:
+    strings = [name, parent, "", "None"]
+    w = lambda s: struct.pack("<H", len(s)) + s.encode()  # noqa: E731
+    body = struct.pack("<IBBHQ", 0xFA57C0DE, 3, 9, 2, 0) + w(source) + w("user") + w("machine")
+    body += struct.pack("<H", len(strings)) + b"".join(w(s) for s in strings)
+    body += b"\0"                     # no debug info
+    body += struct.pack("<H", 0)      # no user flags
+    obj = struct.pack("<HHBIH", 1, 2, 0, 0, 2) + b"\0" * 12
+    body += struct.pack("<H", 1) + struct.pack("<HI", 0, len(obj) + 4) + obj
+    return body
+
+
+class PapyrusTests(Base):
+    def test_pex_reader(self):
+        from f4forge import papyrus
+        info = papyrus.parse_pex(make_pex("MyQuestScript", "Quest", "C:\\src\\MyQuestScript.psc"))
+        self.assertEqual((info["game"], info["version"], info["source"]), ("Fallout 4", "3.9", "C:\\src\\MyQuestScript.psc"))
+        self.assertEqual(info["objects"], [{"name": "MyQuestScript", "parent": "Quest"}])
+        from f4forge.util import ForgeError
+        with self.assertRaises(ForgeError):
+            papyrus.parse_pex(b"NOTAPEXFILE!")
+
+    def test_diagnostic_parsers(self):
+        from f4forge import papyrus
+        off = papyrus.parse_diagnostics("C:\\x\\A.psc(4,21): no viable alternative at input ')'\nNo output generated", "official")
+        self.assertEqual(off, [{"file": "C:\\x\\A.psc", "line": 4, "column": 21, "severity": "error",
+                                "message": "no viable alternative at input ')'", "compiler": "official"}])
+        cap = papyrus.parse_diagnostics("A.psc (4, 22:23): Fatal Error: Unexpected token ')'!", "caprica")
+        self.assertEqual((cap[0]["line"], cap[0]["column"], cap[0]["message"]), (4, 22, "Unexpected token ')'!"))
+
+    def test_cache_patches(self):
+        from f4forge import papyrus
+        d = self.tmp / "cache"
+        write(d / "A.psc", " Scriptname A extends ObjectReference\n")
+        write(d / "B.psc", "Scriptname B\nstruct Point\n\tstring parent\n\tfloat x\nendstruct\n")
+        self.assertEqual(papyrus.patch_cache(d), ["A.psc"])
+        self.assertTrue((d / "A.psc").read_text().startswith("Scriptname A"))
+        ov = papyrus.caprica_overlay([d])
+        self.assertEqual(ov["files"], ["B.psc"])
+        self.assertIn("string parent_", Path(ov["path"], "B.psc").read_text())
+        self.assertIn("string parent\n", (d / "B.psc").read_text(), "the shared cache keeps the real member name")
+
+    def _compile(self, compiler):
+        from f4forge import papyrus
+        src = write(self.tmp / "src" / "ForgeSmokeQuest.psc", SMOKE_PSC)
+        bad = write(self.tmp / "bad" / "ForgeBroken.psc", BROKEN_PSC)
+        ok = papyrus.compile_scripts([src], self.tmp / "out", compiler, [str(STUBS)], self.game)
+        self.assertTrue(ok["ok"], ok["diagnostics"])
+        self.assertTrue(ok["scripts"][0]["pex_source"].endswith("ForgeSmokeQuest.psc"))
+        self.assertEqual(ok["scripts"][0]["objects"], ["ForgeSmokeQuest"])
+        nok = papyrus.compile_scripts([bad], self.tmp / "out2", compiler, [str(STUBS)], self.game)
+        self.assertFalse(nok["ok"])
+        errs = [d for d in nok["diagnostics"] if d["severity"] == "error"]
+        self.assertEqual(len(errs), 1, nok["diagnostics"])
+        self.assertEqual(errs[0]["line"], 4)
+
+    @unittest.skipUnless(_tool_ready("caprica"), "Caprica not installed (f4forge tools sync --only caprica --approve)")
+    def test_caprica_compiles_against_stubs(self):
+        os.environ.update(REAL_PATHS)
+        self._compile("caprica")
+
+    def test_official_compiles_against_stubs(self):
+        from f4forge import game as G
+        from f4forge import papyrus
+        os.environ.pop("FALLOUT4_ROOT", None)
+        if self._env.get("FALLOUT4_ROOT"):
+            os.environ["FALLOUT4_ROOT"] = self._env["FALLOUT4_ROOT"]
+        try:
+            real = G.find_game()[0]
+        except Exception:
+            self.skipTest("no installed game")
+        if not papyrus.official_compiler(real):
+            self.skipTest("Creation Kit compiler not installed")
+        self.game = real
+        self._compile("official")
+
+
 if __name__ == "__main__":
     unittest.main()

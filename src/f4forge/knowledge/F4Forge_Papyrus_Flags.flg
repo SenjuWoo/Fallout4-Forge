@@ -1,0 +1,9 @@
+// Fallout 4 Papyrus user flags, written for Fallout 4 Forge (fact papyrus.flags: same names and
+// indexes as the Creation Kit's flags file). Used by Caprica and when the Creation Kit is absent.
+Flag Hidden 0
+Flag Conditional 1
+Flag Default 2
+Flag CollapsedOnRef 3
+Flag CollapsedOnBase 4
+Flag Collapsed CollapsedOnRef & CollapsedOnBase
+Flag Mandatory 5

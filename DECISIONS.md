@@ -55,3 +55,8 @@ Settled during planning (PLAN.md, D1-D15). Not reopened by the build.
   plugin's file name because Mutagen checks the name against the ModKey.
 - B14 (T12) The DX10 chunk rule is "own chunk while the mip has at least 512x512 pixels, at most 4
   chunks", which matches every vanilla entry and Archive2's own defaults.
+- B15 (T17, T18) The Papyrus cache gets two fixes that never touch the game: an indented ScriptName line in
+  one official test script is un-indented, and a Caprica-only overlay renames F4SE's ConnectPoint struct
+  member `parent` (a Caprica keyword) to `parent_`. Scripts that read that member use the official
+  compiler. The game's own Data/Scripts/Source is mirrored without its Base/DLC folders because Caprica
+  scans imports recursively.

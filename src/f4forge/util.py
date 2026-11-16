@@ -116,6 +116,8 @@ def run(argv: list[str], timeout: int = 120, cwd: Path | None = None, input_text
                             env={**os.environ, **env} if env else None)
     except FileNotFoundError as e:
         return {"ok": False, "exit": None, "error": f"not found: {e}"}
+    except OSError as e:
+        return {"ok": False, "exit": None, "error": f"cannot run {argv[0]}: {e}"}
     except subprocess.TimeoutExpired:
         return {"ok": False, "exit": None, "error": f"timed out after {timeout}s"}
     return {"ok": cp.returncode == 0, "exit": cp.returncode, "stdout": cp.stdout, "stderr": cp.stderr}

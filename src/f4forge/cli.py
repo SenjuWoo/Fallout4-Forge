@@ -248,6 +248,49 @@ def cmd_records(args):
     return r, (0 if r.get("ok") else 1)
 
 
+def cmd_papyrus(args):
+    from pathlib import Path
+
+    from . import papyrus as PY
+    if args.action != "sources" and args.what:
+        args.paths = [args.what] + list(args.paths)
+    if args.action == "sources":
+        from .game import find_game
+        if args.what not in ("build", "status", None):
+            raise ForgeError(f"papyrus sources {args.what}?", "f4forge papyrus sources build | status")
+        if args.what != "build":
+            m = PY.load_manifest()
+            return ({"built": False, "fix": "f4forge papyrus sources build"} if not m else m), (0 if m else 1)
+        return PY.build_sources(find_game(args.game)[0], args.route, args.sample), 0
+    if args.action == "pex":
+        rows = []
+        for t in args.paths:
+            info = PY.parse_pex(Path(t).read_bytes())
+            rows.append({"file": t, **{k: info[k] for k in ("version", "game", "source", "user", "objects")}})
+        return {"pex": rows}, 0
+    if args.action == "decompile":
+        if not args.out:
+            raise ForgeError("papyrus decompile needs --out", "f4forge papyrus decompile X.pex --out <folder>")
+        return PY.decompile([Path(p) for p in args.paths], Path(args.out)), 0
+    # compile
+    game_root = _game_root_or_none(args)
+    project_root = None
+    targets = [Path(p) for p in args.paths]
+    if not targets:
+        from .project import find_project
+        project_root = find_project(args.project)
+        targets = [project_root / "source" / "Scripts"]
+        out = Path(args.out) if args.out else project_root / "data" / "Scripts"
+    else:
+        out = Path(args.out) if args.out else Path.cwd() / "build" / "Scripts"
+    imports = list(args.import_dir or [])
+    if not args.no_cache:
+        imports += PY.import_dirs(project_root)
+    r = PY.compile_scripts(targets, out, args.compiler, imports, game_root, args.release, args.final, args.optimize,
+                           Path(args.flags) if args.flags else None)
+    return r, (0 if r["ok"] else 1)
+
+
 def cmd_tools(args):
     from . import tools as T
     root = T.tools_root(args.tools_root) if args.action != "status" or args.tools_root else None
@@ -329,6 +372,22 @@ def parser() -> argparse.ArgumentParser:
     s.add_argument("--edids", action="store_true", help="inspect: also index EditorIDs (inflates compressed records)")
     s.add_argument("--limit", type=int, default=50, help="inspect: max record types listed")
     s.add_argument("--out", help="export: YAML folder; build: plugin file to write")
+    s.add_argument("--project", help="project folder (default: current folder or a parent with f4forge.json)")
+    s = add("papyrus", cmd_papyrus, "Papyrus: sources build|status, compile (official or Caprica), decompile, pex")
+    s.add_argument("action", choices=["sources", "compile", "decompile", "pex"], help="sources | compile | decompile | pex")
+    s.add_argument("what", nargs="?", help="sources: build | status; other actions: the first path")
+    s.add_argument("paths", nargs="*", help="compile: .psc files or folders (default: the project's source/Scripts); "
+                                             "decompile/pex: .pex files")
+    s.add_argument("--compiler", default="auto", choices=["auto", "official", "caprica"], help="compile driver")
+    s.add_argument("--out", help="output folder (compile default: project data/Scripts)")
+    s.add_argument("--import-dir", action="append", help="extra import folder (repeatable, searched first)")
+    s.add_argument("--no-cache", action="store_true", help="compile: do not add the source cache imports")
+    s.add_argument("--flags", help="compile: flags file (default: the forge's F4Forge_Papyrus_Flags.flg)")
+    s.add_argument("--release", action="store_true", help="compile: strip DebugOnly code")
+    s.add_argument("--final", action="store_true", help="compile: strip BetaOnly code")
+    s.add_argument("--optimize", action="store_true", help="compile: optimise")
+    s.add_argument("--route", default="auto", choices=["auto", "official", "decompiled"], help="sources build route")
+    s.add_argument("--sample", type=int, help="sources build (decompiled): only the first N scripts")
     s.add_argument("--project", help="project folder (default: current folder or a parent with f4forge.json)")
     s = add("worker", cmd_worker, "records worker (.NET, Mutagen): build | status")
     s.add_argument("action", choices=["build", "status"], help="build | status")
