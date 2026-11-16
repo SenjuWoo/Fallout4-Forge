@@ -1,0 +1,153 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python: ['3.10', '3.13', '3.14']
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: python -m pip install -e .
+      - name: Test suite
+        run: python tests/run_tests.py
+      - name: CLI smoke
+        run: |
+          f4forge --version
+          f4forge capabilities
+          f4forge plan "add a new weapon mod with an MCM menu"
+          f4forge selftest
+
+  templates:
+    # No game on the runner: scaffold every kind, check (0 errors expected) and package.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Install
+        run: python -m pip install -e .
+      - name: Scaffold every kind, check, package, validate
+        run: |
+          f4forge new "CI Mod" --out ci-mod --kind plugin --kind papyrus --kind mcm --kind robco --kind bos --kind f4se --kind textures --kind materials --kind mesh --kind looksmenu --kind bodyslide --kind audio
+          cd ci-mod
+          f4forge build --skip plugin --skip scripts --skip textures --skip voice
+          f4forge check > check.json || true
+          python -c "import json,sys; d=json.load(open('check.json')); print(json.dumps(d['errors'], indent=1)); sys.exit(1 if d['errors'] else 0)"
+          f4forge package > package.json
+          python -c "import json,sys; d=json.load(open('package.json')); print(d['sha256']); sys.exit(0 if d['validation']['ok'] else 1)"
+          f4forge validate dist/CIMod-0.1.0.zip
+
+  worker:
+    # Records worker: restore from the committed lock file, build, then the worker tests (new -> Python reader).
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '9.0.x'
+      - name: Install
+        run: python -m pip install -e .
+      - name: Build the worker
+        run: f4forge worker build
+      - name: Worker round trip
+        run: python -m unittest -v tests.test_f4forge.WorkerTests
+
+  papyrus:
+    # Caprica from tools.lock.json, compiling against the hand-written stubs.
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Install
+        run: python -m pip install -e .
+      - name: Sync Caprica
+        shell: pwsh
+        run: |
+          f4forge config --set "tools_root=$env:RUNNER_TEMP\f4tools"
+          f4forge tools sync --only caprica --approve
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+      - name: Compile against the stubs
+        run: python -m unittest -v tests.test_f4forge.PapyrusTests
+
+  native:
+    # The pinned commonlibf4-template with the pinned CommonLibF4, built with xmake + MSVC.
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: latest
+      - name: Install
+        run: python -m pip install -e .
+      - name: Scaffold and build
+        shell: pwsh
+        run: |
+          f4forge config --set "tools_root=$env:RUNNER_TEMP\f4tools"
+          f4forge tools sync --only commonlibf4 --only commonlibf4-template --approve
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          f4forge native new CIPlugin --out ci-plugin
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          f4forge native build ci-plugin | Tee-Object build.json
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+  install:
+    # The installer is also the updater: a second run converges (one PATH entry, a working launcher);
+    # uninstall removes what it added.
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Install twice, run, uninstall
+        shell: pwsh
+        run: |
+          ./Install.ps1 -SkipTests -SkipTools -NoAgentIntegration
+          ./Install.ps1 -SkipTests -SkipTools -NoAgentIntegration
+          $launcher = Join-Path $env:LOCALAPPDATA 'Fallout4Forge\bin\f4forge.cmd'
+          $out = & $launcher --version
+          if ($LASTEXITCODE -ne 0) { throw "launcher failed ($LASTEXITCODE)" }
+          Write-Host $out
+          $entries = @([Environment]::GetEnvironmentVariable('Path', 'User') -split ';' | Where-Object { $_ -eq (Split-Path $launcher) })
+          if ($entries.Count -ne 1) { throw "expected one PATH entry, found $($entries.Count)" }
+          & $launcher capabilities | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "capabilities failed ($LASTEXITCODE)" }
+          ./Uninstall.ps1
+          if (Test-Path $launcher) { throw 'launcher left behind' }
+          $left = @([Environment]::GetEnvironmentVariable('Path', 'User') -split ';' | Where-Object { $_ -eq (Split-Path $launcher) })
+          if ($left.Count) { throw 'PATH entry left behind' }

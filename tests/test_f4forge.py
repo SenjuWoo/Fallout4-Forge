@@ -1394,6 +1394,30 @@ class SkillTests(unittest.TestCase):
         self.assertEqual(code, 0, out["failed"])
 
 
+class BundleRowTests(unittest.TestCase):
+    def _row(self) -> dict:
+        text = (ROOT / "docs" / "BUNDLE-ROW.md").read_text(encoding="utf-8")
+        return json.loads(re.search(r"```json\n(.*?)\n```", text, re.S).group(1))
+
+    def test_row_matches_the_manifest(self):
+        manifest = json.loads((ROOT / "uabs-companion.json").read_text(encoding="utf-8"))
+        self.assertEqual(self._row(), manifest["entry"])
+        self.assertEqual(manifest["id"], "fallout4-forge")
+
+    def test_row_passes_the_bundle_validator(self):
+        bundle = os.environ.get("UABS_BUNDLE_ROOT")
+        reg_py = Path(bundle) / "TOOLS" / "companion_registry.py" if bundle else None
+        if not reg_py or not reg_py.is_file():
+            self.skipTest("bundle not present (set UABS_BUNDLE_ROOT)")
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("companion_registry", reg_py)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        data = json.loads(Path(mod.REGISTRY).read_text(encoding="utf-8"))
+        data["companions"]["fallout4-forge"] = self._row()
+        mod.validate(data)
+
+
 class HygieneTests(unittest.TestCase):
     """No tracked file carries a drive letter path, a user folder or the operator's account name."""
     PATTERNS = [re.compile(r"(?<![A-Za-z0-9])[A-Za-z]:[\\/](?:Users|Program Files|Backup|SteamLibrary)", re.I),
@@ -1402,7 +1426,8 @@ class HygieneTests(unittest.TestCase):
 
     def hygiene_problems(self, files: list[Path]) -> list[str]:
         problems = []
-        user = os.environ.get("USERNAME") or os.environ.get("USER") or ""
+        # CI runners have generic account names (runner) that legitimately appear in workflow files.
+        user = "" if os.environ.get("GITHUB_ACTIONS") else (os.environ.get("USERNAME") or os.environ.get("USER") or "")
         for p in files:
             if p.suffix.lower() in BINARY_SUFFIXES or p.name in ("packages.lock.json",):
                 continue

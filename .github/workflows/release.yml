@@ -1,0 +1,75 @@
+name: Release
+
+# Push a tag vX.Y.Z on a commit whose CI run already succeeded. The job refuses a tag that does not match
+# __version__ or the CHANGELOG, or a commit without a green CI run, then publishes `git archive` of that
+# commit (built twice, identical bytes) with its SHA-256.
+on:
+  push:
+    tags: ['v*.*.*']
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.13'
+      - name: Tag, version and changelog agree
+        run: |
+          v=$(python -c "import sys; sys.path.insert(0, 'src'); import f4forge; print(f4forge.__version__)")
+          if [ "v$v" != "$GITHUB_REF_NAME" ]; then echo "tag $GITHUB_REF_NAME does not match __version__ $v"; exit 1; fi
+          head=$(grep -m1 -oE '^## [0-9]+\.[0-9]+\.[0-9]+' CHANGELOG.md | cut -c4-)
+          if [ "$head" != "$v" ]; then echo "CHANGELOG top entry is $head, not $v"; exit 1; fi
+          echo "VERSION=$v" >> "$GITHUB_ENV"
+      - name: CI succeeded on this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&status=success" --jq '.total_count')
+          if [ "$n" = "0" ]; then echo "no successful CI run for $GITHUB_SHA; push main, wait for CI, then tag"; exit 1; fi
+      - name: Tests
+        run: |
+          python -m pip install -e .
+          python tests/run_tests.py
+      - name: Build source zip (twice, must be identical)
+        run: |
+          name="Fallout4-Forge-$VERSION-source.zip"
+          mkdir -p dist
+          git archive --format=zip --prefix="Fallout4-Forge-$VERSION/" -o "dist/$name" "$GITHUB_SHA"
+          git archive --format=zip --prefix="Fallout4-Forge-$VERSION/" -o "dist/again.zip" "$GITHUB_SHA"
+          cmp "dist/$name" dist/again.zip
+          rm dist/again.zip
+          (cd dist && sha256sum "$name" > "$name.sha256" && cat "$name.sha256")
+          echo "ZIP=$name" >> "$GITHUB_ENV"
+      - name: Release notes from CHANGELOG
+        run: |
+          python - <<'EOF'
+          import os, re
+          text = open("CHANGELOG.md", encoding="utf-8").read()
+          v = os.environ["VERSION"]
+          m = re.search(r"^## " + re.escape(v) + r"\b.*?$(.*?)(?=^## |\Z)", text, re.M | re.S)
+          body = m.group(1).strip() if m else ""
+          sha = open(f"dist/{os.environ['ZIP']}.sha256").read().split()[0]
+          body += (f"\n\n`{os.environ['ZIP']}` is `git archive` of {os.environ['GITHUB_SHA'][:7]} (built twice, identical "
+                   f"bytes). SHA-256 `{sha}`, also in the attached `.sha256` file.\n\n"
+                   "**Install:** extract next to your modding tools and run `START-HERE.bat`. Needs Windows, Python 3.10+ "
+                   "and Fallout 4; the Creation Kit, a .NET 9 SDK, Blender and xmake/MSVC unlock more routes.")
+          open("notes.md", "w", encoding="utf-8").write(body + "\n")
+          EOF
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            echo "release $GITHUB_REF_NAME already exists; delete it first to republish"; exit 1
+          fi
+          gh release create "$GITHUB_REF_NAME" "dist/$ZIP" "dist/$ZIP.sha256" \
+            --title "Fallout 4 Forge $VERSION" --notes-file notes.md --verify-tag

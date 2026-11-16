@@ -1,53 +1,57 @@
 # STATE - Fallout 4 Forge
 
-- Version: 0.1.0 (in development, not released). Local git repository on `main`, no remote.
-- Phase: building. M0 (T01-T03) and M1 (T04-T07) done; next milestone M2 (T08-T10).
+- Version: 0.1.0 (release candidate; local gate passed, publication in progress).
+- Phase: M0-M9 done; M10 (CI, publish, release, hand-off, close) in progress.
 
 ## NEXT ACTION
 
-**T08** - `tools.lock.json` + `tools.py` ported from `<PATTERN_LOCK>` (kinds, fields, `tools status`,
-`tools sync --approve`, SHA-256 before extraction, receipt, generated `TOOLS.md`, local HTTP
-fixture tests). Then T09 (pin the real tools) and T10 (seed the workspace), finishing M2.
+**T43** - publish: `gh repo create SenjuWoo/Fallout4-Forge --public --source . --remote origin --push`, turn on
+Dependabot alerts and secret scanning, wait for CI on the pushed SHA, query the alerts. Then T44 (release
+v0.1.0 from the green SHA, verify the asset), T45 hand-off note, T46 close.
 
-Start of every build session: read PLAN.md, this file and LOCAL.md; run `f4forge game` once
-(assumption A15: runtime must still read 1.11.240.0).
-
-Builder prompt (same text every session, Opus High or Medium per PLAN.md):
-
-> Build Fallout 4 Forge from PLAN.md. Read PLAN.md, STATE.md and LOCAL.md, continue at NEXT
-> ACTION, finish the current milestone under the plan's rules, update STATE.md, commit, stop.
+Start of every build session: read PLAN.md, this file and LOCAL.md; run `f4forge game` (runtime must read 1.11.240.0).
 
 ## Done
 
-- 2026-11-15 Planning: orientation, research, PLAN.md, LOCAL.md, WORKSPACE_OWNERSHIP.md.
-- 2026-11-15 M0: repository bootstrap, package skeleton (`cli`, `util`, `home`, launcher, test
-  runner), mirror, line-ending and awkward-path launcher tests.
-- 2026-11-15 M1: `game` discovery (pure-Python PE version reader, Steam/registry/GOG,
-  F4SE, Address Library, official masters, Creation Club, Creation Kit tools and sources,
-  frameworks, My Games, mod managers, archive and plugin header censuses), `doctor` in five
-  sections, knowledge data (17 facts with tiers, 21 frameworks, 24 routes, 28 topic names),
-  `knowledge`, `facts`, `plan`, `capabilities`, `config`.
+- 2026-11-15 Planning (PLAN.md, LOCAL.md, WORKSPACE_OWNERSHIP.md).
+- 2026-11-15 M0-M1: CLI contract, game discovery, doctor, knowledge, routing.
+- 2026-11-15 M2: tool lock and sync (35 entries, SHA-256 pins, receipt), workspace seeded.
+- 2026-11-15 M3: BA2 read/write (vanilla hash and chunk rules, Archive2 cross-check), plugin walker, light rule,
+  load order, .NET records worker (Mutagen 0.54.4), Spriggit YAML tree.
+- 2026-11-15 M4: Papyrus source cache, PEX reader, official compiler and Caprica behind one diagnostics format.
+- 2026-11-15 M5: textures, BGSM/BGEM byte-exact, NIF + Blender/PyNifly, FUZ/XWM/LIP voice.
+- 2026-11-15 M6: MCM, RobCo Patcher, Base Object Swapper, LooksMenu/BodySlide/INI validators, native F4SE
+  (CommonLibF4 build), logs, Creation Kit wrappers.
+- 2026-11-15 M7: projects (12 kinds), build, check with evidence tiers, deterministic package (+BA2, FOMOD),
+  deploy/undeploy, bump, index, conflicts, Nexus lookups and page kit.
+- 2026-11-15 M8: 28 knowledge topics with fact tags, skill, selftest, README, AGENTS, CHANGELOG, hygiene test.
+- 2026-11-15 M9: installer/uninstaller, companion manifest, machine wiring, live install, end-to-end smoke test.
+- 2026-11-15 M10 so far: CI/release/Dependabot workflows, bundle hand-off doc and test, local gate.
 
-## Evidence
+## Evidence (details per task in PLAN.md)
 
-- `python tests/run_tests.py`: 36 tests OK (synthetic fixtures only).
-- On this PC `f4forge game`: runtime 1.11.240.0 (Steam build 24564252), F4SE 0.7.9 matching,
-  Address Library present, Creation Kit 1.11.246.0 with its compiler, Archive2, LipGenerator and
-  xwmaencode; `--archives`: 643 archives, 0 header errors, version/type counts equal LOCAL.md.
-- `f4forge doctor`: exit 0 (toolchain, game, payload ok; tools and worker degraded until M2/M3);
-  with `FALLOUT4_ROOT` at an empty folder: game fail, exit 2.
-- Per-task evidence is in PLAN.md; deviations are B1-B8 in DECISIONS.md.
+- Tests: 87 offline tests green (synthetic fixtures only); `f4forge selftest` exit 0; `f4forge doctor` exit 0 with
+  all five sections ok on this PC.
+- Installed truth: runtime 1.11.240.0, F4SE 0.7.9 matching, Address Library present, Creation Kit 1.11.246.0.
+- Archives: 643/643 parse; Materials.ba2 and TexturesPatch.ba2 repacked identically, Archive2 agrees; 26081
+  binary materials round-trip byte for byte.
+- Records: worker find over 552 plugins in 3 s; 467355 EditorIDs indexed; worker-made plugins read back by the
+  Python walker; Spriggit round trips record-equal.
+- Papyrus: official compiler and Caprica both compile and both report planted errors as structured diagnostics.
+- End-to-end: workspace project "Forge Smoke Test" built, checked (static and compile PASS), packaged and
+  validated; deploy dry run clean. Load and gameplay NOT RUN.
 
 ## Gaps and open items
 
-- `tools` and `worker` doctor sections are `degraded` by design until T08/T09 and T15.
-- No knowledge topic text yet (28 names listed; T33 writes them).
-- `load_order.official_masters` is `unverified` until T14.
-- Assumptions A2-A19 unchecked; A1 and A15 hold (runtime 1.11.240.0 read this session).
-- Field report filed for the pattern's launcher (exit code lost inside an `if` block); see
-  DECISIONS B1. The bundle's registry rows remain a hand-off (T45).
+- In-game load of forge-written DX10 archives and of the smoke-test mod: NOT RUN (needs a game session).
+- Creation Kit precombine/previs/facegen runs and CKPE deployment: dry runs only (NOT RUN by design).
+- Animation (HKX) and interface (SWF): knowledge-only in 0.1 (D15).
+- Compiling against a full decompiled import set (no-Creation-Kit tier) not run; a 50-script decompile sample matched.
+- Bundle: its `--roots` flag does not reach self-registration (field report filed); registry and
+  `ai-tooling-stack` rows wait for the bundle owner (docs/BUNDLE-ROW.md).
+- Pattern launcher exit-code defect reported to Cyberpunk Forge (field report).
 
 ## Log
 
 - 2026-11-15 plan written; Creation Kit installed by the owner; plan revised for the Creation Kit tier.
-- 2026-11-15 M0 + M1 built, tests green, committed.
+- 2026-11-15 M0-M9 built and committed; owner asked for the whole plan in one run (DECISIONS B9).
