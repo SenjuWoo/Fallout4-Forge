@@ -15,6 +15,7 @@ import re
 import shutil
 import struct
 import tarfile
+import tempfile
 import time
 import zipfile
 from pathlib import Path
@@ -416,6 +417,23 @@ def compile_scripts(targets: list[Path], out: Path, compiler: str = "auto", impo
         argvs.append(argv)
         r = run(argv, timeout=timeout, cwd=out)
         text = (r.get("stdout") or "") + "\n" + (r.get("stderr") or "")
+        # Caprica 0.3.0 fails on some source folder paths with "ios_base::failbit set" every time for that
+        # path (fact papyrus.caprica_failbit); the same files compile from another folder. Retry from fresh
+        # temporary copies so the result reflects the code, not the folder name.
+        stage_tries = 0
+        while compiler == "caprica" and "ios_base::failbit" in text and stage_tries < 5:
+            stage_tries += 1
+            stage = Path(tempfile.mkdtemp(prefix="f4f-cap-"))
+            try:
+                staged = stage / target.name
+                (shutil.copytree if is_dir else shutil.copy2)(target, staged)
+                retry = [a if a != str(target) else str(staged) for a in argv]
+                retry[retry.index("-i") + 1] = ";".join([str(staged if is_dir else stage)] + imp.split(";")[1:])
+                r = run(retry, timeout=timeout, cwd=out)
+                text = (r.get("stdout") or "") + "\n" + (r.get("stderr") or "")
+                text = text.replace(str(staged), str(target))
+            finally:
+                shutil.rmtree(stage, ignore_errors=True)
         d = parse_diagnostics(text, compiler)
         diags += d
         names = [p.stem for p in (iter_files(target, (".psc",)) if is_dir else [target])]

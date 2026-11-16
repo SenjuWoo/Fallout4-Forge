@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "fact": "texture.roles",
+  "note": "Formats are the ones vanilla uses most per suffix (fact texture.roles, read from every vanilla DX10 entry). Vanilla stores UNORM formats, not sRGB.",
+  "roles": {
+    "diffuse": {"suffixes": ["_d"], "format": "BC1_UNORM", "format_alpha": "BC3_UNORM", "mips": true},
+    "normal": {"suffixes": ["_n"], "format": "BC5_UNORM", "mips": true},
+    "specular": {"suffixes": ["_s"], "format": "BC5_UNORM", "mips": true},
+    "glow": {"suffixes": ["_g"], "format": "BC1_UNORM", "mips": true},
+    "facemask": {"suffixes": ["_msn"], "format": "BC3_UNORM", "format_noalpha": "BC1_UNORM", "mips": true},
+    "environment": {"suffixes": ["_e"], "format": "BC1_UNORM", "mips": true},
+    "greyscale": {"suffixes": ["_m", "_h", "_b"], "format": "BC1_UNORM", "mips": true},
+    "generic": {"suffixes": [], "format": "BC3_UNORM", "mips": true},
+    "ui": {"suffixes": [], "format": "B8G8R8A8_UNORM", "mips": false}
+  },
+  "max_dimension": 4096,
+  "warn_dimension": 2048,
+  "single_mip_allowed": ["tintmask", "interface"]
+}

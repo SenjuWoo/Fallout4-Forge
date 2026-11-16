@@ -291,6 +291,146 @@ def cmd_papyrus(args):
     return r, (0 if r["ok"] else 1)
 
 
+def cmd_material(args):
+    import json as _json
+    from pathlib import Path
+
+    from . import bgsm
+    if args.action == "show":
+        doc = bgsm.parse(Path(args.target).read_bytes())
+        if args.out:
+            Path(args.out).write_text(bgsm.to_json(doc) + "\n", encoding="utf-8", newline="\n")
+        return {"file": args.target, "material": doc, "textures": bgsm.textures(doc), "json": args.out}, 0
+    if args.action == "build":
+        if not args.out:
+            raise ForgeError("material build needs --out <file.bgsm|.bgem>", "f4forge material build m.json --out m.bgsm")
+        doc = _json.loads(Path(args.target).read_text(encoding="utf-8"))
+        data = bgsm.build(doc)
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.out).write_bytes(data)
+        return {"file": args.out, "bytes": len(data), "type": doc["Type"], "version": doc.get("Version")}, 0
+    # verify
+    from .home import home_dir
+    from .util import save_json
+    targets = [Path(args.target)] if args.target else []
+    if args.all_installed:
+        from .game import find_game
+        from .util import ci_child
+        from . import ba2
+        for p in sorted(ci_child(find_game(args.game)[0], "Data").glob("*.ba2")):
+            try:
+                if ba2.read_header(p)["type"] == "GNRL":
+                    targets.append(p)
+            except ForgeError:
+                pass
+    if not targets:
+        raise ForgeError("material verify needs an archive or --all-installed", "f4forge material verify --all-installed")
+    rows = [r for r in (bgsm.roundtrip_archive(t) for t in targets) if r["materials"]]
+    full = home_dir() / "reports" / "material-roundtrip.json"
+    save_json(full, rows)
+    total = sum(r["materials"] for r in rows)
+    same = sum(r["byte_identical"] for r in rows)
+    jt = sum(r.get("json_text", 0) for r in rows)
+    vers = {}
+    for r in rows:
+        for k, v in r["versions"].items():
+            vers[k] = vers.get(k, 0) + v
+    return {"archives_with_materials": len(rows), "materials": total, "byte_identical": same, "json_text": jt,
+            "failed": total - same - jt, "versions": dict(sorted(vers.items())), "full_result": str(full)}, (0 if total == same + jt else 1)
+
+
+def cmd_tex(args):
+    from pathlib import Path
+
+    from . import textures as TX
+    if args.action == "inspect":
+        rows = [TX.inspect(Path(t), args.role) for t in args.targets]
+        bad = [r for r in rows if not r["ok"]]
+        return ({"results": rows} if len(rows) > 1 else rows[0]), (1 if bad else 0)
+    out = Path(args.out) if args.out else Path.cwd()
+    rows = [TX.convert(Path(t), out, args.role, args.alpha, args.format, args.name) for t in args.targets]
+    return ({"results": rows} if len(rows) > 1 else rows[0]), 0
+
+
+def cmd_nif(args):
+    from pathlib import Path
+
+    from . import nif
+    if args.action == "info":
+        return nif.info(Path(args.target)), 0
+    installed = None
+    if not args.no_index:
+        from .index import assets
+        installed = assets()
+    project_data = Path(args.project) / "data" if args.project else None
+    r = nif.check_refs(Path(args.target), project_data, installed)
+    return r, (0 if r["ok"] else 1)
+
+
+def cmd_mesh(args):
+    from pathlib import Path
+
+    from . import nif
+    src = Path(args.source)
+    if args.action == "import":
+        out = Path(args.out) if args.out else src.with_suffix(".blend")
+        return nif.blender_run("import", src, out), 0
+    if args.action == "export":
+        if not args.out:
+            raise ForgeError("mesh export needs --out <file.nif>", "f4forge mesh export model.blend --out Meshes/X.nif")
+        r = nif.blender_run("export", src, Path(args.out))
+    else:
+        out = Path(args.out) if args.out else src.with_name(src.stem + ".roundtrip.nif")
+        r = nif.blender_run("roundtrip", src, out)
+    r["nif"] = nif.info(Path(r["output"]))
+    return r, 0
+
+
+def cmd_index(args):
+    from .game import find_game
+    from .index import build
+    return build(find_game(args.game)[0], records=not args.no_records), 0
+
+
+def cmd_audio(args):
+    from pathlib import Path
+
+    from . import audio as A
+    game_root = _game_root_or_none(args)
+    t = Path(args.target) if args.target else None
+    if args.action == "check":
+        r = A.wav_check(t)
+        return r, (0 if r["ok"] else 1)
+    if args.action == "unfuz":
+        lip, snd = A.fuz_unpack(t.read_bytes())
+        out = Path(args.out) if args.out else t.parent
+        out.mkdir(parents=True, exist_ok=True)
+        (out / (t.stem + ".lip")).write_bytes(lip)
+        (out / (t.stem + ".xwm")).write_bytes(snd)
+        return {"fuz": str(t), "lip_bytes": len(lip), "xwm_bytes": len(snd), "sum_ok": 12 + len(lip) + len(snd) == t.stat().st_size,
+                "xwm": A.riff_info(snd) if snd[:4] == b"RIFF" else None, "out": str(out)}, 0
+    if args.action == "fuz":
+        if not (args.lip and args.out):
+            raise ForgeError("audio fuz needs <audio.xwm> --lip <file.lip> --out <file.fuz>", "f4forge audio --help")
+        data = A.fuz_pack(Path(args.lip).read_bytes(), t.read_bytes())
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        Path(args.out).write_bytes(data)
+        return {"fuz": args.out, "bytes": len(data)}, 0
+    if args.action == "encode":
+        return A.encode(t, Path(args.out) if args.out else t.with_suffix(".xwm"), game_root, args.bitrate), 0
+    if not args.text:
+        raise ForgeError(f"audio {args.action} needs --text \"<the spoken line>\"", "f4forge audio --help")
+    if args.action == "lip":
+        return A.lip(t, args.text, Path(args.out) if args.out else t.with_suffix(".lip"), game_root, args.language), 0
+    if not (args.plugin and args.voice_type and args.info):
+        raise ForgeError("audio voice needs --plugin, --voice-type and --info <INFO FormID>", "f4forge audio --help")
+    data_root = Path(args.out) if args.out else None
+    if data_root is None:
+        from .project import find_project
+        data_root = find_project(args.project) / "data"
+    return A.voice(t, args.text, data_root, args.plugin, args.voice_type, args.info, args.response, game_root), 0
+
+
 def cmd_tools(args):
     from . import tools as T
     root = T.tools_root(args.tools_root) if args.action != "status" or args.tools_root else None
@@ -389,6 +529,45 @@ def parser() -> argparse.ArgumentParser:
     s.add_argument("--route", default="auto", choices=["auto", "official", "decompiled"], help="sources build route")
     s.add_argument("--sample", type=int, help="sources build (decompiled): only the first N scripts")
     s.add_argument("--project", help="project folder (default: current folder or a parent with f4forge.json)")
+    s = add("tex", cmd_tex, "textures: inspect DDS against role rules, convert images with role presets (texconv)")
+    s.add_argument("action", choices=["inspect", "convert"], help="inspect <dds...> | convert <image...>")
+    s.add_argument("targets", nargs="+", help="DDS files (inspect) or source images (convert)")
+    s.add_argument("--role", help="texture role (default: from the file suffix): diffuse normal specular glow facemask "
+                                  "environment greyscale generic ui")
+    s.add_argument("--alpha", action="store_true", help="convert: keep alpha (diffuse -> BC3)")
+    s.add_argument("--format", help="convert: explicit DXGI format, e.g. BC7_UNORM")
+    s.add_argument("--name", help="convert: output file name (default: the input stem)")
+    s.add_argument("--out", help="convert: output folder (default: current folder)")
+    s = add("audio", cmd_audio, "audio/voice: check WAV, encode XWM, lip, voice (WAV+text -> FUZ in voice layout), fuz, unfuz")
+    s.add_argument("action", choices=["check", "encode", "lip", "voice", "fuz", "unfuz"],
+                   help="check <wav> | encode <wav> | lip <wav> --text | voice <wav> --text ... | fuz <xwm> --lip | unfuz <fuz>")
+    s.add_argument("target", help="input file")
+    s.add_argument("--text", help="lip/voice: the spoken line")
+    s.add_argument("--out", help="output file (voice: Data-relative root folder; default: project data/)")
+    s.add_argument("--lip", help="fuz: the .lip file")
+    s.add_argument("--bitrate", type=int, help="encode: xWMA bitrate (20000 ... 192000)")
+    s.add_argument("--language", default="USEnglish", help="lip: LipGenerator language")
+    s.add_argument("--plugin", help="voice: plugin file name, e.g. MyMod.esp")
+    s.add_argument("--voice-type", help="voice: voice type EditorID, e.g. NPCMBoston")
+    s.add_argument("--info", help="voice: topic INFO FormID (hex)")
+    s.add_argument("--response", type=int, default=1, help="voice: response number")
+    s.add_argument("--project", help="project folder")
+    s = add("nif", cmd_nif, "NIF meshes: info (header, blocks, strings), refs (materials/textures checked)")
+    s.add_argument("action", choices=["info", "refs"], help="info <nif> | refs <nif>")
+    s.add_argument("target", help="NIF file")
+    s.add_argument("--project", help="refs: project folder whose data/ also counts")
+    s.add_argument("--no-index", action="store_true", help="refs: do not use the installed asset index")
+    s = add("mesh", cmd_mesh, "meshes through headless Blender + PyNifly: import (nif->blend), export, roundtrip")
+    s.add_argument("action", choices=["import", "export", "roundtrip"], help="import | export | roundtrip")
+    s.add_argument("source", help="NIF (import/roundtrip) or .blend (export)")
+    s.add_argument("--out", help="output file")
+    s = add("index", cmd_index, "build the local index: asset paths, script names, EditorIDs (under the forge home)")
+    s.add_argument("--no-records", action="store_true", help="skip the EditorID index (worker)")
+    s = add("material", cmd_material, "BGSM/BGEM materials: show (to JSON), build (from JSON), verify (byte round trip)")
+    s.add_argument("action", choices=["show", "build", "verify"], help="show <file> | build <json> --out | verify")
+    s.add_argument("target", nargs="?", help="material file, JSON file, or archive for verify")
+    s.add_argument("--out", help="show: write the JSON here; build: material file to write")
+    s.add_argument("--all-installed", action="store_true", help="verify every material in the installed GNRL archives")
     s = add("worker", cmd_worker, "records worker (.NET, Mutagen): build | status")
     s.add_argument("action", choices=["build", "status"], help="build | status")
     s = add("records", cmd_records, "records via the worker: find, show, override, new, conflicts, validate")

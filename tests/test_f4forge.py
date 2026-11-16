@@ -990,7 +990,7 @@ class PapyrusTests(Base):
         self.assertFalse(nok["ok"])
         errs = [d for d in nok["diagnostics"] if d["severity"] == "error"]
         self.assertEqual(len(errs), 1, nok["diagnostics"])
-        self.assertEqual(errs[0]["line"], 4)
+        self.assertEqual(errs[0]["line"], 4, errs)
 
     @unittest.skipUnless(_tool_ready("caprica"), "Caprica not installed (f4forge tools sync --only caprica --approve)")
     def test_caprica_compiles_against_stubs(self):
@@ -1011,6 +1011,109 @@ class PapyrusTests(Base):
             self.skipTest("Creation Kit compiler not installed")
         self.game = real
         self._compile("official")
+
+
+# --- M5: textures, materials, meshes, audio ---------------------------------------------------------
+
+def make_png(w: int, h: int, alpha: bool = False) -> bytes:
+    import zlib
+    ch = 4 if alpha else 3
+    raw = b"".join(b"\0" + bytes(((x * 7 + y * 3 + c * 50) & 0xFF) for x in range(w) for c in range(ch)) for y in range(h))
+
+    def chunk(t, d):
+        return struct.pack(">I", len(d)) + t + d + struct.pack(">I", zlib.crc32(t + d) & 0xFFFFFFFF)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 6 if alpha else 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(raw)) + chunk(b"IEND", b""))
+
+
+def make_nif(textures=("textures\\a_d.dds", "textures\\a_n.dds"), material="Materials\\A.bgsm") -> bytes:
+    def ss(s):
+        return bytes([len(s) + 1]) + s.encode() + b"\0"
+
+    def sz(s):
+        return struct.pack("<I", len(s)) + s.encode()
+    types = ["NiNode", "BSShaderTextureSet"]
+    node = b"\0" * 20
+    tset = struct.pack("<i", len(textures)) + b"".join(sz(t) for t in textures)
+    head = b"Gamebryo File Format, Version 20.2.0.7\n" + struct.pack("<IBII", 0x14020007, 1, 12, 2)
+    head += struct.pack("<I", 130) + ss("forge") + ss("") + ss("test") + ss("max")
+    head += struct.pack("<H", len(types)) + b"".join(sz(t) for t in types)
+    head += struct.pack("<HH", 0, 1) + struct.pack("<II", len(node), len(tset))
+    head += struct.pack("<II", 1, len(material)) + sz(material) + struct.pack("<I", 0)
+    return head + node + tset + struct.pack("<II", 1, 0)
+
+
+def make_wav(path: Path, rate=44100, channels=1, bits=16, seconds=0.2) -> Path:
+    n = int(rate * seconds)
+    data = bytes((i * 37) & 0xFF for i in range(n * channels * bits // 8))
+    hdr = b"RIFF" + struct.pack("<I", 36 + len(data)) + b"WAVE" + b"fmt " + struct.pack(
+        "<IHHIIHH", 16, 1, channels, rate, rate * channels * bits // 8, channels * bits // 8, bits)
+    return write(path, hdr + b"data" + struct.pack("<I", len(data)) + data)
+
+
+class AssetTests(Base):
+    def test_material_json_roundtrip_both_kinds(self):
+        from f4forge import bgsm
+        for kind, fields in (("BGSM", bgsm.BGSM), ("BGEM", bgsm.BGEM)):
+            doc = {"Type": kind}
+            for name, typ, cond in bgsm.BASE + fields:
+                if cond is None or cond(doc.get("Version", 2), doc):
+                    doc[name] = {"u32": 2 if name == "Version" else 0, "f32": 0.5, "u8": 3, "bool": True,
+                                 "str": f"textures\\x\\{name}.dds", "color": [1.0, 0.5, 0.25]}[typ]
+            doc["Version"] = 2
+            data = bgsm.build(doc)
+            back = bgsm.parse(data)
+            self.assertEqual(bgsm.build(json.loads(json.dumps(back))), data, kind)
+            self.assertTrue(bgsm.textures(back))
+        j = bgsm.parse(b'{\r\n "sDiffuseTexture" : "x_d.dds"\r\n}')
+        self.assertEqual(j["Type"], "JSON")
+        self.assertEqual(bgsm.textures(j), {"sDiffuseTexture": "x_d.dds"})
+
+    def test_texture_roles_and_inspect(self):
+        from f4forge import textures
+        self.assertEqual(textures.role_for("Gun_d.dds"), "diffuse")
+        self.assertEqual(textures.role_for("Face_msn.dds"), "facemask")
+        self.assertEqual(textures.role_for("Gun_n.DDS"), "normal")
+        good = textures.inspect(write(self.tmp / "Gun_n.dds", make_dds(256, 256, 9, 83)))
+        self.assertTrue(good["ok"])
+        self.assertEqual(good["warnings"], [])
+        odd = textures.inspect(write(self.tmp / "Gun_s.dds", make_dds(256, 256, 3, 71)))
+        self.assertEqual(sorted(w["code"] for w in odd["warnings"]), ["TEX-FORMAT", "TEX-MIPS"])
+
+    @unittest.skipUnless(_tool_ready("directxtex"), "texconv not installed")
+    def test_png_converts_to_each_preset(self):
+        os.environ.update(REAL_PATHS)
+        from f4forge import textures
+        png = write(self.tmp / "src.png", make_png(64, 64, alpha=True))
+        for role in ("diffuse", "normal", "specular", "glow", "generic"):
+            r = textures.convert(png, self.tmp / "out", role, name=f"T_{role}.png")
+            self.assertEqual(r["inspect"]["format_name"], textures.rules()["roles"][role]["format"], role)
+            self.assertEqual(r["inspect"]["mips"], 7, role)
+
+    def test_nif_header_and_refs(self):
+        from f4forge import nif
+        p = write(self.tmp / "Meshes" / "A.nif", make_nif())
+        i = nif.info(p)
+        self.assertEqual((i["version"], i["user_version"], i["bs_version"], i["blocks"], i["roots"]), ("20.2.0.7", 12, 130, 2, 1))
+        self.assertTrue(i["size_ok"])
+        r = nif.check_refs(p, None, {"textures\\a_d.dds", "materials\\a.bgsm"})
+        self.assertEqual([m["path"] for m in r["missing"]], ["textures\\a_n.dds"])
+        from f4forge.util import ForgeError
+        with self.assertRaises(ForgeError):
+            nif.read(write(self.tmp / "x.nif", b"not a nif at all"))
+
+    def test_fuz_wav_and_voice_path(self):
+        from f4forge import audio
+        data = audio.fuz_pack(b"LIPDATA", b"RIFFxxxxXWMA")
+        self.assertEqual(audio.fuz_unpack(data), (b"LIPDATA", b"RIFFxxxxXWMA"))
+        self.assertTrue(audio.wav_check(make_wav(self.tmp / "ok.wav"))["ok"])
+        bad = audio.wav_check(make_wav(self.tmp / "st.wav", channels=2, bits=8))
+        self.assertEqual(sorted(e["code"] for e in bad["errors"]), ["WAV-BITS", "WAV-CHANNELS"])
+        self.assertEqual(audio.voice_path("My Mod.esp", "NPCMBoston", "0100ABCD", 2),
+                         "Sound/Voice/My Mod.esp/NPCMBoston/0000ABCD_2.fuz")
+        from f4forge.util import ForgeError
+        with self.assertRaises(ForgeError):
+            audio.encode(self.tmp / "ok.wav", self.tmp / "o.xwm", self.game / "nope")
 
 
 if __name__ == "__main__":

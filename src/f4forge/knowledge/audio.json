@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "voice": {
+    "path": "Sound/Voice/{plugin}/{voicetype}/{info:08X}_{response}.fuz",
+    "fact": "audio.voice_path",
+    "note": "INFO is the topic-info FormID with the load-order byte cleared (8 hex digits as stored in vanilla names); response is the response number from 1."
+  },
+  "wav": {"bits": 16, "channels": 1, "sample_rates": [44100, 48000, 22050], "fact": "audio.wav_rules"},
+  "xwm_bitrates": [20000, 32000, 48000, 64000, 96000, 160000, 192000]
+}

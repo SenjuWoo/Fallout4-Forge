@@ -113,6 +113,7 @@ def run(argv: list[str], timeout: int = 120, cwd: Path | None = None, input_text
     try:
         cp = subprocess.run([str(a) for a in argv], capture_output=True, text=True, errors="replace", encoding="utf-8",
                             timeout=timeout, cwd=str(cwd) if cwd else None, input=input_text,
+                            stdin=None if input_text is not None else subprocess.DEVNULL,
                             env={**os.environ, **env} if env else None)
     except FileNotFoundError as e:
         return {"ok": False, "exit": None, "error": f"not found: {e}"}
