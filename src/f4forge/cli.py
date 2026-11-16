@@ -431,6 +431,96 @@ def cmd_audio(args):
     return A.voice(t, args.text, data_root, args.plugin, args.voice_type, args.info, args.response, game_root), 0
 
 
+def cmd_logs(args):
+    from .logs import collect
+    return collect(_game_root_or_none(args), args.lines, args.mod), 0
+
+
+def cmd_explain(args):
+    from .logs import explain
+    hits = explain(" ".join(args.text))
+    return {"matches": hits, "hint": None if hits else "no known signature; f4forge logs shows the surrounding lines"}, (0 if hits else 1)
+
+
+def cmd_mcm(args):
+    from pathlib import Path
+
+    from .mcm import validate, validate_installed
+    lo = None
+    try:
+        from .game import find_game
+        from .loadorder import load_order
+        lo = {o["plugin"].lower() for o in load_order(find_game(args.game)[0])["order"]}
+    except ForgeError:
+        lo = None
+    if args.installed:
+        from .game import find_game
+        r = validate_installed(find_game(args.game)[0], lo)
+        r.pop("results")
+        return r, (0 if not r["with_errors"] else 1)
+    if not args.folder:
+        raise ForgeError("mcm needs a MCM/Config/<Mod> folder or --installed", "f4forge mcm <folder>")
+    r = validate(Path(args.folder), lo)
+    return r, (0 if r["ok"] else 1)
+
+
+def cmd_validate_cfg(args):
+    from pathlib import Path
+
+    from . import datakinds, frameworks_cfg
+    lo = None
+    try:
+        from .game import find_game
+        from .loadorder import load_order
+        lo = {o["plugin"].lower() for o in load_order(find_game(args.game)[0])["order"]}
+    except ForgeError:
+        lo = None
+    rows = []
+    for f in args.files:
+        p = Path(f)
+        low = p.as_posix().lower()
+        if "robco_patcher" in low and low.endswith(".ini"):
+            rows.append(frameworks_cfg.robco_validate(p, None, lo))
+        elif low.endswith("_swap.ini"):
+            rows.append(frameworks_cfg.bos_validate(p))
+        else:
+            rows.append(datakinds.validate_any(p))
+    bad = [r for r in rows if not r["ok"]]
+    return ({"results": rows} if len(rows) > 1 else rows[0]), (1 if bad else 0)
+
+
+def cmd_native(args):
+    from pathlib import Path
+
+    from . import native
+    if args.action == "new":
+        if not args.target:
+            raise ForgeError("native new needs a plugin name", "f4forge native new MyPlugin --out <folder>")
+        out = Path(args.out) if args.out else Path.cwd() / native._safe_name(args.target)
+        return native.new(args.target, out, args.author or "", args.description or ""), 0
+    if args.action == "check":
+        r = native.check_dll(Path(args.target))
+        return r, (0 if r["ok"] else 1)
+    folder = Path(args.target) if args.target else Path.cwd()
+    r = native.build(folder, args.mode)
+    return r, (0 if r["ok"] else 1)
+
+
+def cmd_ck(args):
+    from . import ck
+    from .game import find_game
+    root = find_game(args.game)[0]
+    if args.action == "info":
+        return ck.info(root), 0
+    if args.action == "ckpe-install":
+        return ck.ckpe_install(root, args.approve), 0
+    if args.action == "ckpe-uninstall":
+        return ck.ckpe_uninstall(root, args.approve), 0
+    if not args.plugin:
+        raise ForgeError(f"ck {args.action} needs --plugin <file in Data>", "f4forge ck previs --plugin MyMod.esp")
+    return ck.run_job(args.action, root, args.plugin, args.approve, args.mode, args.scope, args.platform), 0
+
+
 def cmd_tools(args):
     from . import tools as T
     root = T.tools_root(args.tools_root) if args.action != "status" or args.tools_root else None
@@ -552,6 +642,30 @@ def parser() -> argparse.ArgumentParser:
     s.add_argument("--info", help="voice: topic INFO FormID (hex)")
     s.add_argument("--response", type=int, default=1, help="voice: response number")
     s.add_argument("--project", help="project folder")
+    s = add("logs", cmd_logs, "collect and triage F4SE, plugin, Papyrus and crash logs (read-only)")
+    s.add_argument("--mod", help="only lines or logs mentioning this mod")
+    s.add_argument("--lines", type=int, default=25, help="max problem lines per log")
+    s = add("explain", cmd_explain, "match an error text against the known-signature registry")
+    s.add_argument("text", nargs="+", help="error text")
+    s = add("mcm", cmd_mcm, "validate an MCM/Config/<Mod> folder (config.json, settings.ini, keybinds.json)")
+    s.add_argument("folder", nargs="?", help="the MCM config folder")
+    s.add_argument("--installed", action="store_true", help="validate every installed MCM config")
+    s = add("validate-config", cmd_validate_cfg, "validate RobCo Patcher INIs, *_SWAP.ini, LooksMenu presets, BodySlide XML, INI files")
+    s.add_argument("files", nargs="+", help="files to check")
+    s = add("native", cmd_native, "native F4SE plugins: new (CommonLibF4 template), build (xmake/MSVC), check (DLL exports)")
+    s.add_argument("action", choices=["new", "build", "check"], help="new <Name> | build [folder] | check <dll>")
+    s.add_argument("target", nargs="?", help="new: plugin name; build: folder; check: DLL")
+    s.add_argument("--out", help="new: output folder")
+    s.add_argument("--author", help="new: author")
+    s.add_argument("--description", help="new: description")
+    s.add_argument("--mode", default="releasedbg", choices=["releasedbg", "debug", "release"], help="build: xmake mode")
+    s = add("ck", cmd_ck, "Creation Kit tier: info, precombine, previs, facegen, ckpe-install/uninstall (dry run unless --approve)")
+    s.add_argument("action", choices=["info", "precombine", "previs", "facegen", "ckpe-install", "ckpe-uninstall"])
+    s.add_argument("--plugin", help="plugin file name in Data")
+    s.add_argument("--mode", default="clean", choices=["clean", "filtered"], help="precombine/previs: clean or filtered")
+    s.add_argument("--scope", default="all", choices=["all", "main", "ints", "other"], help="precombine/previs: cells")
+    s.add_argument("--platform", default="X64", choices=["X64", "W32", "XB1", "PS4"], help="facegen: platform")
+    s.add_argument("--approve", action="store_true", help="really run / install (writes into the game folder)")
     s = add("nif", cmd_nif, "NIF meshes: info (header, blocks, strings), refs (materials/textures checked)")
     s.add_argument("action", choices=["info", "refs"], help="info <nif> | refs <nif>")
     s.add_argument("target", help="NIF file")

@@ -229,6 +229,10 @@ def build_sources(game_root: Path, route: str = "auto", sample: int | None = Non
             shutil.copy2(p, mirror / rel)
             n += 1
         out["patched"] += ["installed/" + x for x in patch_cache(mirror)] if mirror.is_dir() else []
+        user = next((p for p in mirror.iterdir() if p.is_dir() and p.name.lower() == "user"), None) if mirror.is_dir() else None
+        if user:
+            # Source/User is the Creation Kit's own import folder (MCM.psc and most mod sources live there).
+            imports.append({"path": str(user), "tier": "installed", "from": "game Data/Scripts/Source/User"})
         imports.append({"path": str(mirror), "tier": "installed", "from": f"game Data/Scripts/Source ({n} files, "
                         "official Base/DLC folders left out)"})
     imports.append({"path": str(base), "tier": route, "from": "forge cache"})

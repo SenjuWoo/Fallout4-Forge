@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "fact": "mcm.schema",
+  "top_level": {"required": ["modName", "displayName"],
+                "known": ["modName", "displayName", "minMcmVersion", "pluginRequirements", "content", "pages", "author", "version", "cursorFillMode"]},
+  "control_types": ["text", "section", "spacer", "image", "button", "switcher", "hiddenSwitcher", "stepper", "slider",
+                    "dropdown", "dropdownFiles", "hotkey", "textinput", "textinputFloat"],
+  "value_controls": ["switcher", "hiddenSwitcher", "stepper", "slider", "dropdown", "dropdownFiles", "textinput", "textinputFloat"],
+  "source_types": {
+    "ModSettingBool": {"needs": ["id"], "ini": true},
+    "ModSettingInt": {"needs": ["id"], "ini": true},
+    "ModSettingFloat": {"needs": ["id"], "ini": true},
+    "ModSettingString": {"needs": ["id"], "ini": true},
+    "GlobalValue": {"needs": ["sourceForm"]},
+    "PropertyValueBool": {"needs": ["sourceForm", "propertyName"]},
+    "PropertyValueInt": {"needs": ["sourceForm", "propertyName"]},
+    "PropertyValueFloat": {"needs": ["sourceForm", "propertyName"]}
+  },
+  "action_types": ["CallFunction", "CallGlobalFunction", "CallExternalFunction", "RunConsoleCommand"],
+  "source_form_pattern": "^[^|]+\\.(esp|esm|esl)\\|[0-9A-Fa-f]{1,8}$",
+  "mod_setting_id_pattern": "^[^:]+:[^:]+$",
+  "papyrus": {
+    "script": "MCM",
+    "functions": ["GetModSettingBool", "GetModSettingInt", "GetModSettingFloat", "GetModSettingString",
+                  "SetModSettingBool", "SetModSettingInt", "SetModSettingFloat", "SetModSettingString", "RefreshMenu", "IsInstalled", "GetVersionCode"],
+    "event": "OnMCMSettingChange"
+  },
+  "locations": {"config": "MCM/Config/<modName>/config.json", "defaults": "MCM/Config/<modName>/settings.ini",
+                "keybinds": "MCM/Config/<modName>/keybinds.json", "user_settings": "MCM/Settings/<modName>.ini (written by MCM, never shipped)"}
+}

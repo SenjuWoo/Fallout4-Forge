@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "fact": "robco.syntax",
+  "root": "F4SE/Plugins/RobCo_Patcher",
+  "line": "one patch per line; key=value segments joined by ':'; lists comma-separated; forms Plugin.ext|HEX, optional ~fields; 'none' leaves a field unset; comments start with // or ;",
+  "folders": {
+    "ammo": ["filterByAmmos", "ammoCategory", "attackDamage", "setNewProjectile", "addToFormList", "value", "weight"],
+    "armor": ["filterByArmors", "filterByArmorsExcluded", "filterByKeywordsOr", "filterByKeywordsExcluded", "damageResist", "keywordsToAdd", "attachParentSlotKeywordsToAdd"],
+    "formList": ["filterByFormLists", "formsToAdd", "formsToRemove"],
+    "ingestible": ["filterByAlchs", "filterByKeywords", "filterByMgefs", "mgefsToAdd", "mgefsToRemove", "changeMgefs"],
+    "leveledList": ["filterByLLs", "addToLLs", "removeFromLLs", "clear", "calcForLevelAndEachItem", "calcUseAll", "addToLL"],
+    "misc": ["filterByHasComponent", "weightMultiply"],
+    "npc": ["filterByNpcs", "filterByRaces", "filterByKeywords", "autoCalcStats", "levelRange", "changeAVIFS", "keywordsToAdd", "perksToAdd"],
+    "objectModification": ["filterByNameContainsAnd", "filterByNameContainsOr", "filterByNameContainsExclude", "setOmodProperty"],
+    "race": ["filterByRaces", "filterByKeywords", "changeAVIFS", "keywordsToAdd", "spellsToAdd"],
+    "weapon": ["filterByWeapons", "filterByKeywords", "filterByKeywordsOr", "filterByKeywordsExcluded", "filterByHasAmmoFromWeaponList",
+               "attackDamage", "bashDamage", "outOfRangeDamageMult", "attackActionPointCost", "damageTypesToChange", "keywordsToAdd",
+               "keywordsToRemove", "attachParentSlotKeywordsToAdd", "setNewAmmo", "setNewAmmoList", "aimModel", "fullName", "value", "weight"],
+    "aimModel": [], "constructibleObject": [], "explosion": [], "projectile": []
+  },
+  "deprecated": {"addToLL": "outdated (the author's own example marks it so); use filterByLLs=...:addToLLs=..."},
+  "docs": "https://www.nexusmods.com/fallout4/mods/69798?tab=articles",
+  "form_pattern": "^\\s*[^|,~]+\\.(esm|esp|esl)\\|[0-9A-Fa-f]{1,8}(~.*)?\\s*$"
+}

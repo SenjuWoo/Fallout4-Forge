@@ -1,5 +1,18 @@
 {
   "schema": 1,
-  "note": "Log and crash signatures, filled by T27. Each entry: id, match (regex), log, meaning, fix, fact.",
-  "signatures": []
+  "note": "Log and crash signatures. Each: id, match (regex, case-insensitive), log, meaning, fix, fact. F4SE statuses come from F4SE 0.7.9 PluginManager.cpp (fact f4se.loader_statuses).",
+  "signatures": [
+    {"id": "F4SE-NO-VERSION-DATA", "match": "no version data", "log": "f4se.log", "meaning": "the DLL in F4SE/Plugins exports no F4SEPlugin_Version: it is not an F4SE plugin, or it targets the pre-Next-Gen runtime", "fix": "remove it from Data/F4SE/Plugins or install the build for this runtime", "fact": "f4se.loader_statuses"},
+    {"id": "F4SE-INCOMPATIBLE-GAME", "match": "incompatible with current version of the game", "log": "f4se.log", "meaning": "the plugin does not declare support for this runtime", "fix": "install the plugin version made for the installed runtime (f4forge game shows it)", "fact": "f4se.loader_statuses"},
+    {"id": "F4SE-ADDRLIB-UPDATE", "match": "address library needs to be updated", "log": "f4se.log", "meaning": "the Address Library bin for this runtime is missing or older than the plugin needs", "fix": "update Address Library for F4SE Plugins (nexus fallout4/mods/47327)", "fact": "f4se.loader_statuses"},
+    {"id": "F4SE-NEWER-F4SE", "match": "requires newer script extender", "log": "f4se.log", "meaning": "the plugin needs a newer F4SE than the installed one", "fix": "update F4SE (nexus fallout4/mods/42147)", "fact": "f4se.loader_statuses"},
+    {"id": "F4SE-BAD-VERSION-DATA", "match": "bad version data|no name specified", "log": "f4se.log", "meaning": "the plugin's version data is malformed", "fix": "report it to the plugin author; remove the plugin", "fact": "f4se.loader_statuses"},
+    {"id": "F4SE-FATAL", "match": "fatal error occurred while (loading plugin|checking plugin compatibility)", "log": "f4se.log", "meaning": "the plugin crashed during load or its compatibility check", "fix": "disable the plugin and check its own log", "fact": "f4se.loader_statuses"},
+    {"id": "F4SE-INCOMPATIBLE-LOAD", "match": "reported as incompatible during load", "log": "f4se.log", "meaning": "the plugin's own load function returned false", "fix": "read the plugin's log in My Games/Fallout4/F4SE", "fact": "f4se.loader_statuses"},
+    {"id": "F4SE-COULDNT-LOAD", "match": "couldn't load plugin", "log": "f4se.log", "meaning": "Windows could not load the DLL (a missing dependency or a wrong architecture)", "fix": "install the Visual C++ redistributable it needs, or the x64 build", "fact": "f4se.loader_statuses"},
+    {"id": "CRASH-ACCESS-VIOLATION", "match": "EXCEPTION_ACCESS_VIOLATION", "log": "crash log", "meaning": "the game read or wrote invalid memory; the modules and call stack below it name the suspects", "fix": "look at the first non-game module in the probable call stack and the recently changed mods; roll back the latest change", "fact": "crash.logs"},
+    {"id": "CRASH-STACK-OVERFLOW", "match": "EXCEPTION_STACK_OVERFLOW", "log": "crash log", "meaning": "unbounded recursion (often a script or a bad precombine/previs chain)", "fix": "check the call stack for repeating frames", "fact": "crash.logs"},
+    {"id": "PAPYRUS-STACK-DUMP", "match": "Dumping stack|Suspended stack count is over our warning threshold", "log": "Papyrus.0.log", "meaning": "the Papyrus VM is overloaded; scripts are backing up", "fix": "find the scripts named most often in the dump; remove polling loops", "fact": "crash.logs"},
+    {"id": "PAPYRUS-NONE", "match": "Cannot call \\w+\\(\\) on a None object", "log": "Papyrus.0.log", "meaning": "a script used a property or variable that is not filled", "fix": "fill the property in the plugin (records show) or guard it with 'if x'", "fact": "crash.logs"}
+  ]
 }

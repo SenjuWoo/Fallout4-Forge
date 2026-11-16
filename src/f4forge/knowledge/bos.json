@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "fact": "bos.syntax",
+  "file_pattern": "Data/*_SWAP.ini",
+  "sections": {
+    "Forms": {"fields": ["origBase", "swapBase(s)", "transformOverrides", "chance"], "min": 2},
+    "References": {"fields": ["origRef", "swapBase", "transformOverrides", "chance"], "min": 2},
+    "Transforms": {"fields": ["origBase|origRef", "transformOverrides", "chance"], "min": 2},
+    "Properties": {"fields": ["origBase|origRef", "transformOverrides", "chance"], "min": 2}
+  },
+  "conditional_sections": "Forms|Transforms may carry a location filter: [Forms|LocationEDID,CellEDID,KeywordEDID,RegionEDID]",
+  "id": "FormID~Plugin.esp (0x prefix allowed) or EditorID",
+  "transforms": ["pos", "posR", "posA", "rot", "rotR", "rotA", "scale", "scaleA", "flags", "flagsC"],
+  "chance": ["chance", "chanceS", "chanceL", "chanceR"],
+  "none": "NONE",
+  "docs": "https://www.nexusmods.com/fallout4/mods/67528",
+  "source": "Base Object Swapper 2.2.1 description by its author, read through the Nexus GraphQL API on 2026-11-15"
+}

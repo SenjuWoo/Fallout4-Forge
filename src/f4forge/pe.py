@@ -110,6 +110,24 @@ class PE:
         return self._read(self.rva_to_off(rva), size)
 
 
+def exports(path: Path) -> dict:
+    """Exported names (export directory = data directory 0) and the machine type."""
+    with PE(path) as pe:
+        names = []
+        if pe.dirs and pe.dirs[0][0]:
+            base = pe.rva_to_off(pe.dirs[0][0])
+            d = pe._read(base, 40)
+            n_names, names_rva = struct.unpack_from("<I", d, 24)[0], struct.unpack_from("<I", d, 32)[0]
+            if n_names:
+                table = pe._read(pe.rva_to_off(names_rva), 4 * n_names)
+                for i in range(n_names):
+                    off = pe.rva_to_off(struct.unpack_from("<I", table, 4 * i)[0])
+                    raw = pe._read(off, 256)
+                    names.append(raw.split(b"\0", 1)[0].decode("ascii", "replace"))
+        return {"machine": {0x8664: "x64", 0x14C: "x86"}.get(pe.machine, hex(pe.machine)), "pe32plus": pe.pe32plus,
+                "exports": names}
+
+
 def fixed_versions(path: Path) -> dict | None:
     """{'file': 'a.b.c.d', 'product': 'a.b.c.d'} from VS_FIXEDFILEINFO, or None."""
     try:

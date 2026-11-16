@@ -1116,5 +1116,135 @@ class AssetTests(Base):
             audio.encode(self.tmp / "ok.wav", self.tmp / "o.xwm", self.game / "nope")
 
 
+# --- M6: framework configs, data kinds, native, logs, Creation Kit ----------------------------------------
+
+GOOD_MCM = {"modName": "ForgeMod", "displayName": "Forge Mod", "minMcmVersion": 2, "content": [
+    {"text": "General", "type": "section"},
+    {"id": "bEnabled:Main", "text": "Enabled", "type": "switcher", "valueOptions": {"sourceType": "ModSettingBool"}},
+    {"id": "fScale:Main", "text": "Scale", "type": "slider",
+     "valueOptions": {"min": 0, "max": 2, "step": 0.1, "sourceType": "ModSettingFloat"}},
+    {"text": "Global", "type": "stepper", "valueOptions": {"sourceType": "GlobalValue", "sourceForm": "ForgeMod.esp|800"}},
+    {"id": "Toggle", "text": "Toggle hotkey", "type": "hotkey"}]}
+
+
+def make_mcm(root: Path, doc=None, ini="[Main]\nbEnabled=1\nfScale=1.0\n", keybinds=True) -> Path:
+    d = root / "MCM" / "Config" / "ForgeMod"
+    write(d / "config.json", json.dumps(doc if doc is not None else GOOD_MCM))
+    if ini is not None:
+        write(d / "settings.ini", ini)
+    if keybinds:
+        write(d / "keybinds.json", json.dumps({"modName": "ForgeMod", "keybinds": [
+            {"id": "Toggle", "desc": "Toggle", "action": {"type": "CallFunction", "form": "ForgeMod.esp|800", "function": "Toggle"}}]}))
+    return d
+
+
+class FrameworkConfigTests(Base):
+    def test_mcm_good_and_six_negatives(self):
+        from f4forge import mcm
+        good = mcm.validate(make_mcm(self.tmp / "g"))
+        self.assertTrue(good["ok"], good["errors"])
+        bad_cases = {
+            "MCM-JSON": lambda r: write(make_mcm(r) / "config.json", "{ not json"),
+            "MCM-INI-KEY": lambda r: make_mcm(r, ini="[Main]\nbEnabled=1\n"),
+            "MCM-HOTKEY-KB": lambda r: make_mcm(r, keybinds=False),
+            "MCM-SOURCE-FORM": lambda r: make_mcm(r, dict(GOOD_MCM, content=GOOD_MCM["content"][:3] + [
+                {"type": "stepper", "valueOptions": {"sourceType": "GlobalValue", "sourceForm": "ForgeMod|xyz"}}])),
+            "MCM-ID-FORMAT": lambda r: make_mcm(r, dict(GOOD_MCM, content=[
+                {"id": "bEnabled", "type": "switcher", "valueOptions": {"sourceType": "ModSettingBool"}}])),
+            "MCM-TOP-MISSING": lambda r: make_mcm(r, {k: v for k, v in GOOD_MCM.items() if k != "modName"}),
+        }
+        for code, build in bad_cases.items():
+            root = self.tmp / code
+            build(root)
+            r = mcm.validate(root / "MCM" / "Config" / "ForgeMod")
+            self.assertFalse(r["ok"], code)
+            self.assertIn(code, [e["code"] for e in r["errors"]], code)
+
+    def test_robco_good_and_negatives(self):
+        from f4forge import frameworks_cfg as F
+        d = self.tmp / "Data" / "F4SE" / "Plugins" / "RobCo_Patcher" / "weapon"
+        good = write(d / "good.ini", "//comment\nfilterByWeapons=Fallout4.esm|00004822:attackDamage=33:keywordsToAdd=Fallout4.esm|00092A86\n")
+        r = F.robco_validate(good, None, {"fallout4.esm"})
+        self.assertTrue(r["ok"], r["errors"])
+        self.assertEqual((r["folder"], r["patches"]), ("weapon", 1))
+        bad = write(d / "bad.ini", "filterByWeapons=Fallout4.esm|ZZZZ:attackDamage=33\nfilterByWeapons=Fallout4.esm|4822:oops\n"
+                                   "filterByWeapons=Fallout4.esm|4822:madeUpKey=1\n")
+        r = F.robco_validate(bad, None, {"fallout4.esm"})
+        self.assertEqual(sorted({e["code"] for e in r["errors"]}), ["ROBCO-FORM", "ROBCO-SEGMENT"])
+        self.assertIn("ROBCO-KEY", [w["code"] for w in r["warnings"]])
+        self.assertTrue(all(w.get("tier") for w in r["warnings"]))
+
+    def test_bos_author_examples_and_negatives(self):
+        from f4forge import frameworks_cfg as F
+        good = write(self.tmp / "Data" / "Forge_SWAP.ini",
+                     "[Forms]\n;comment\n0x0008e371~Fallout4.esm|0x000140d99~Fallout4.esm\nPen01|PenBlue|NONE|chanceS(50)\n"
+                     "CoffeeCup01|CoffeeCupCracked01|posR(10.0,5.0,50.0/100.0),scale(1.0/1.50)\n"
+                     "[References]\n0x1234~Fallout4.esm|0x000140d99~Fallout4.esm|scale(1.0/1.50)\n"
+                     "[Forms|DiamondCityLocation]\nCoffeeCup01|CoffeeCupCracked01\n[Transforms]\nBowl_05_Silver|rotR(-90,0,0),scale(2.0)\n")
+        r = F.bos_validate(good)
+        self.assertTrue(r["ok"], r["errors"])
+        self.assertEqual(r["rules"], 6)
+        bad = write(self.tmp / "Data" / "Broken.ini", "[Swaps]\nA|B\n[Forms]\nOnlyOne\nzz~Fallout4.esm|B\nA|B|NONE|chance(150)\n")
+        codes = {e["code"] for e in F.bos_validate(bad)["errors"]}
+        self.assertEqual(codes, {"BOS-NAME", "BOS-SECTION", "BOS-NO-SECTION", "BOS-FIELDS", "BOS-ID", "BOS-CHANCE"})
+
+    def test_data_kinds(self):
+        from f4forge import datakinds as D
+        lm = write(self.tmp / "F4EE" / "Presets" / "Me.json", json.dumps(
+            {"Gender": 1, "HeadParts": [], "Morphs": {}, "Tints": {}, "Weight": [0.1, 0.2, 0.3]}))
+        self.assertTrue(D.validate_any(lm)["ok"])
+        self.assertFalse(D.looksmenu_validate(write(self.tmp / "F4EE" / "Presets" / "Bad.json", '{"Gender": 3}'))["ok"])
+        bp = write(self.tmp / "SliderPresets" / "P.xml", '<?xml version="1.0"?><SliderPresets><Preset name="A" set="CBBE">'
+                   '<SetSlider name="Breasts" size="big" value="50"/></Preset></SliderPresets>')
+        self.assertTrue(D.validate_any(bp)["ok"])
+        bad = write(self.tmp / "SliderPresets" / "Q.xml", '<SliderPresets><Preset name="A"><SetSlider name="X" size="huge" value="x"/></Preset></SliderPresets>')
+        self.assertEqual({e["code"] for e in D.bodyslide_preset_validate(bad)["errors"]}, {"BS-SIZE", "BS-VALUE"})
+        sg = write(self.tmp / "SliderGroups" / "G.xml", '<SliderGroups><Group name="CBBE"><Member name="Body"/></Group></SliderGroups>')
+        self.assertTrue(D.validate_any(sg)["ok"])
+        ini = write(self.tmp / "Tweak.ini", "[Display]\nbFoo=1\niBar=x\n")
+        r = D.ini_validate(ini)
+        self.assertTrue(r["ok"])
+        self.assertEqual([w["code"] for w in r["warnings"]], ["INI-TYPE"])
+        rep = D.replacer_report(write(self.tmp / "proj" / "data" / "Textures" / "a_d.dds", b"x").parents[1],
+                                {"textures\\a_d.dds"})
+        self.assertEqual(rep["replaces_installed"], ["textures\\a_d.dds"])
+
+
+class NativeLogsCkTests(Base):
+    def test_dll_export_check_rejects_plain_pe(self):
+        from f4forge import native
+        r = native.check_dll(write(self.tmp / "x.dll", make_pe("1.0.0.0")))
+        self.assertFalse(r["ok"])
+        self.assertEqual(sorted(e["message"] for e in r["errors"]),
+                         ["missing export F4SEPlugin_Load", "missing export F4SEPlugin_Version"])
+
+    def test_f4se_log_and_explain(self):
+        from f4forge import logs
+        log = write(self.tmp / "f4se.log", "F4SE runtime: initialize (version = 0.7.9 010B0F00 X, os = 6.2)\n"
+                    "plugin A.dll (00000001 Alpha 00000002) loaded correctly (handle 1)\n"
+                    "plugin B.dll (00000000  00000000) no version data 0 (handle 0)\n"
+                    "plugin C.dll (00000001 Gamma 00000001) disabled, address library needs to be updated 0 (handle 0)\n")
+        r = logs.f4se_log(log)
+        self.assertEqual(r["loaded"], 1)
+        self.assertEqual([f["explained"][0]["id"] for f in r["failed"]], ["F4SE-NO-VERSION-DATA", "F4SE-ADDRLIB-UPDATE"])
+        code, out = run_cli("explain", "Cannot call GetValue() on a None object, aborting function call")
+        self.assertEqual(out["matches"][0]["id"], "PAPYRUS-NONE")
+        crash = write(self.tmp / "crash-2026.log", 'Unhandled exception "EXCEPTION_ACCESS_VIOLATION" at 0x7FF6 Fallout4.exe+1234\n'
+                      "PROBABLE CALL STACK:\n\t[ 0] 0x7FF6 Fallout4.exe+1234\n\t[ 1] 0x7FF8 BadPlugin.dll+99\n")
+        c = logs.crash_summary(crash)
+        self.assertEqual((c["exception"], c["stack_modules"]), ("EXCEPTION_ACCESS_VIOLATION", ["Fallout4.exe", "BadPlugin.dll"]))
+
+    def test_ck_dry_run_argv(self):
+        from f4forge import ck
+        r = ck.run_job("precombine", self.game, "MyMod.esp", approve=False, mode="filtered", scope="ints")
+        self.assertTrue(r["dry_run"])
+        self.assertEqual([a[1:] for a in r["argv"]], [["-GeneratePreCombined:MyMod.esp", "filtered", "ints"],
+                                                      ["-CompressPSG:MyMod.esp"], ["-BuildCDX:MyMod.esp"]])
+        self.assertEqual(ck.plan("facegen", self.game, "MyMod.esp")[0][1:], ["-ExportFaceGenData:MyMod.esp", "X64"])
+        from f4forge.util import ForgeError
+        with self.assertRaises(ForgeError):
+            ck.plan("previs", self.game, "NotThere.esp")
+
+
 if __name__ == "__main__":
     unittest.main()
