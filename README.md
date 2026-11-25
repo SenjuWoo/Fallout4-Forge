@@ -47,17 +47,17 @@ stay. Without installing, `f4forge.cmd` runs the forge from the checkout.
 
 ## A two-minute tour
 
-```bat
+```powershell
 f4forge doctor
 f4forge plan "add a new weapon mod with an MCM menu"
 f4forge records find --type WEAP --edid 10mm --plugins Fallout4.esm
 f4forge new "My Mod" --kind plugin --kind papyrus --kind mcm
-cd "My Mod"               :: the folder new printed (under the workspace root when one is set)
+cd "My Mod"               # the folder new printed (under the workspace root when one is set)
 f4forge records new --type QUST --edid MyModQuest
 f4forge build
 f4forge check --compile
 f4forge package
-f4forge deploy            :: dry run; add --approve to copy into the game
+f4forge deploy            # dry run; add --approve to copy into the game
 ```
 
 ![Terminal: f4forge plan routes "add a new weapon mod with an MCM menu" to the weapon-omod route with the records find, records new and check commands and the weapons-omods and plugin-basics docs; f4forge records find scans 252 WEAP records in Fallout4.esm and returns four 10mm FormKeys such as 004822:Fallout4.esm](docs/presentation/screenshot-plan-records.png)
@@ -108,8 +108,8 @@ gameplay are never claimed by the forge; they stay `NOT RUN` until you test them
 
 `python tests/run_tests.py` runs the offline suite on synthetic fixtures (never a game file). CI runs it on
 Windows and Linux for Python 3.10, 3.13 and 3.14, scaffolds every project kind and packages it, builds the records
-worker, compiles Papyrus with Caprica against stubs, builds the CommonLibF4 template, and installs and uninstalls
-twice. Releases are `git archive` of a commit whose CI is green, built twice to prove identical bytes.
+worker, compiles Papyrus with Caprica against stubs, builds the CommonLibF4 template, and installs twice (the second run must converge)
+and uninstalls. Releases are `git archive` of a commit whose CI is green, built twice to prove identical bytes.
 
 ## Known gaps in 0.1
 
