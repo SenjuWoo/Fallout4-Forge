@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Fallout 4 Forge: a phosphor-green anvil inside a vault-door cog on a dark terminal screen with scanlines">
+  <defs>
+    <radialGradient id="screen" cx="0.5" cy="0.45" r="0.7">
+      <stop offset="0" stop-color="#11301f"/>
+      <stop offset="1" stop-color="#050c08"/>
+    </radialGradient>
+    <clipPath id="tile"><rect width="512" height="512" rx="88"/></clipPath>
+    <pattern id="scan" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="3" fill="#000000" opacity="0.35"/>
+    </pattern>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="7" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <g clip-path="url(#tile)">
+    <rect width="512" height="512" fill="url(#screen)"/>
+    <g filter="url(#glow)" fill="#3dff8c">
+      <!-- vault-door cog: ring with twelve teeth -->
+      <path fill-rule="evenodd" d="M256 64A192 192 0 1 1 255.9 64ZM256 102A154 154 0 1 0 256.1 102Z"/>
+      <rect x="236" y="36" width="40" height="40" rx="5" transform="rotate(0 256 256)"/>
+      <rect x="236" y="36" width="40" height="40" rx="5" transform="rotate(30 256 256)"/>
+      <rect x="236" y="36" width="40" height="40" rx="5" transform="rotate(60 256 256)"/>
+      <rect x="236" y="36" width="40" height="40" rx="5" transform="rotate(90 256 256)"/>
+      <rect x="236" y="36" width="40" height="40" rx="5" transform="rotate(120 256 256)"/>
+      <rect x="236" y="36" width="40" height="40" rx="5" transform="rotate(150 256 256)"/>
+      <rect x="236" y="36" width="40" height="40" rx="5" transform="rotate(180 256 256)"/>
+      <rect x="236" y="36" width="40" height="40" rx="5" transform="rotate(210 256 256)"/>
+      <rect x="236" y="36" width="40" height="40" rx="5" transform="rotate(240 256 256)"/>
+      <rect x="236" y="36" width="40" height="40" rx="5" transform="rotate(270 256 256)"/>
+      <rect x="236" y="36" width="40" height="40" rx="5" transform="rotate(300 256 256)"/>
+      <rect x="236" y="36" width="40" height="40" rx="5" transform="rotate(330 256 256)"/>
+      <!-- anvil: horn, face, waist, foot -->
+      <path d="M110 226H346V212H396V280H330L304 304V330H332L348 358H170L186 330H214V304L188 280H170Z"/>
+    </g>
+    <!-- face highlight and spark in rust orange -->
+    <rect x="222" y="236" width="128" height="9" fill="#ff8a3d"/>
+    <path fill="#ff8a3d" d="M330 126L338 150L362 158L338 166L330 190L322 166L298 158L322 150Z"/>
+    <rect width="512" height="512" fill="url(#scan)"/>
+  </g>
+  <rect x="6" y="6" width="500" height="500" rx="84" fill="none" stroke="#3dff8c" stroke-opacity="0.55" stroke-width="6"/>
+</svg>

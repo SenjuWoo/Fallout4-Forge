@@ -1,5 +1,9 @@
 # Changelog
 
+Unreleased (documentation only, no version change): README rewritten with a cover image, terminal shots from
+real runs against an installed game (`docs/presentation/`), the tour verified end to end, installer and
+uninstaller switches and the real exit-code meanings; icon in `docs/icon.svg`.
+
 ## 0.1.1 - 2026-11-15
 
 - Tests in an extracted source zip ignore generated folders (the records worker's bin/ and obj/, built by the

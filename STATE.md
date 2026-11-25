@@ -41,7 +41,7 @@ None in the plan. Open items below are for later versions or for other owners. A
 | Native | CommonLibF4 template builds locally and in CI; exports F4SEPlugin_Load/Preload/Version |
 | End-to-end | "Forge Smoke Test" in the workspace: static PASS, compile PASS, package and validate PASS |
 | Release | v0.1.1 asset downloaded, SHA-256 matched, extracted, installed with a temp home, launcher 0.1.1, suite OK |
-| Alerts | Dependabot 0 open, secret scanning 0 open, code scanning not configured (404, unavailable) |
+| Alerts | Dependabot 0 open, secret scanning 0 open, code scanning (CodeQL default setup) 0 open (2026-11-25) |
 | Load / gameplay | NOT RUN (no game session in this build) |
 
 ## Gaps and open items
@@ -60,3 +60,6 @@ None in the plan. Open items below are for later versions or for other owners. A
 - 2026-11-15 plan written; Creation Kit installed by the owner; plan revised for the Creation Kit tier.
 - 2026-11-15 M0-M9 built and committed; owner asked for the whole plan in one run (DECISIONS B9).
 - 2026-11-15 published; v0.1.0 released, v0.1.1 released and verified (DECISIONS B19).
+- 2026-11-25 presentation pass (docs only, no version change): README rewritten, `docs/icon.svg`, cover and
+  terminal shots in `docs/presentation/` from real runs (game, doctor, plan, records find, new -> records new
+  -> build -> check --compile -> package -> deploy dry run, all exit 0). Suite 87 tests green.
